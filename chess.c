@@ -5,27 +5,34 @@
 
 char pan[17][34];
 char backpan[17][34];
-char (*pStr)[34]; //í˜„ì¬ ë§µ ë³€ê²½ì‹œ ì‚¬ìš©
+char checkbackpan[17][34];
+char (*pStr)[34]; //ÇöÀç ¸Ê º¯°æ½Ã »ç¿ë
 char PAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess.txt";
 char SPAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess_save.txt";
-static int end;
-void clear() { system("clear"); }
+static int end; // King ÀâÀº player È®ÀÎ¿ë
+static int F=0; // ¿òÁ÷ÀÏ ¼ö ÀÖ´Â À§Ä¡°¡ ¾øÀ» ¶§
+static int kx1=18; ky1=1; //player 1ÀÇ King ÁÂÇ¥
+static int kx2=18; ky2=15; //player 2ÀÇ King ÁÂÇ¥
+void clear() { system("clear"); } // clearÇÔ¼ö
 
 
-void Load(int); //íŒŒì¼ ì½ì–´ì„œ ë°°ì—´, í¬ì¸í„°ì— ì €ì¥
-void Print(void); //í˜„ì¬ íŒ ì¶œë ¥
-void Backpan(void); //ë˜ëŒë¦¬ê¸°ìš© íŒ
-void Rule(void); //ë„ì›€ë§ ì¶œë ¥
-void Save(void); //ì €ì¥
-void Delete_s(void); // *í‘œì‹œ ì›ë˜ë¡œ ëŒë¦¬ê¸°
-void Move1(void); //Player1 ì´ë™
-void Move2(void); //Player2 ì´ë™
-void Pawn(int, int); //P ì„ íƒì‹œ
-void Rook(int, int); //R ì„ íƒì‹œ
-void Knight(int, int); //N ì„ íƒì‹œ
-void Bishop(int, int); //B ì„ íƒì‹œ
-void Queen(int, int); //Q ì„ íƒì‹œ
-void King(int, int); //K ì„ íƒì‹œ
+void Load(int); //ÆÄÀÏ ÀĞ¾î¼­ ¹è¿­, Æ÷ÀÎÅÍ¿¡ ÀúÀå
+void Print(void); //ÇöÀç ÆÇ Ãâ·Â
+void Backpan(void); //µÇµ¹¸®±â¿ë ÆÇ ÀúÀå
+void Checkbackpan(void); //µÇµ¹¸®±â¿ë ÆÇ ÀúÀå
+void Returncheckpan(void); //ÆÇ µÇµ¹¸®±â
+void Rule(void); //µµ¿ò¸» Ãâ·Â
+void Save(void); //ÀúÀå
+void Delete_s(void); // *Ç¥½Ã ¿ø·¡·Î µ¹¸®±â
+void Move1(void); //Player1 ÀÌµ¿
+void Move2(void); //Player2 ÀÌµ¿
+void Pawn(int, int); //P ¼±ÅÃ½Ã
+void Rook(int, int); //R ¼±ÅÃ½Ã
+void Knight(int, int); //N ¼±ÅÃ½Ã
+void Bishop(int, int); //B ¼±ÅÃ½Ã
+void Queen(int, int); //Q ¼±ÅÃ½Ã
+void King(int, int); //K ¼±ÅÃ½Ã
+int Check(int); //check ¿©ºÎ È®ÀÎ
 
 
 int main() {
@@ -41,14 +48,14 @@ int main() {
             case 1: {
                 Load(1); Print();
                 while (1) {
-                    Move1(); clear(); Print();
+                    Move1(); /*clear();*/ Print();
                     if(end!=0) {
-                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                       break;
                     }
 
                     Move2(); clear(); Print();
                     if(end!=0) {
-                        printf("\nPlayer %d WIN!\n\n",end); break;
+                        break;
                     }
                 }break;
             }
@@ -124,13 +131,24 @@ void Backpan(void) {
         strcpy(backpan[i], pan[i]);
 }
 
+void Checkbackpan(void) {
+    for(int i=0;i<17;i++)
+        strcpy(checkbackpan[i], pan[i]);
+}
+
+void Returncheckpan(void) {
+    for(int i=0;i<17;i++)
+        strcpy(*(pStr+i), checkbackpan[i]);
+}
+
 void Rule(void) {
     printf("\n<  > :Player 1, [  ] : Player 2\n");
+    printf("\nYou can move your pieces to '*'\n");
     printf("\nK can move one square horizontally, vertically, or diagonally.\n"
            "Q can move any number of vacant squares diagonally, horizontally, or vertically.\n"
            "R can move any number of vacant squares vertically or horizontally. It also is moved while castling.\n"
            "B can move any number of vacant squares in any diagonal direction.\n"
-           "N can move one square along any rank or file and then at an angle. The knightÂ´s movement can also be viewed as an â€œLâ€ or â€œ7â€³ laid out at any horizontal or vertical angle.\n"
+           "N can move one square along any rank or file and then at an angle. The knight¢¥s movement can also be viewed as an ¡°L¡± or ¡°7¡È laid out at any horizontal or vertical angle.\n"
            "P can move forward one square, if that square is unoccupied. \n(If it has not yet moved, the pawn can move two squares forward provided both squares in front of the pawn are unoccupied.)\n\n");
 }
 
@@ -146,12 +164,13 @@ void Delete_s(void) {
 
 }
 
+//player 1 ÀÌµ¿ÇÔ¼ö
 void Move1(void) {
     char before[5], after[5];
     int b1,b2,a1,a2;
     Backpan();
 
-    //ë§ ì—†ëŠ” ìë¦¬ ì„ íƒì‹œ ë‹¤ì‹œ
+    //¸» ¾ø´Â ÀÚ¸® ¼±ÅÃ½Ã ´Ù½Ã
     while(1) {
         printf("< Player 1 >\n(save: save game board)\nWhat? : ");
         scanf("%s", before);
@@ -163,10 +182,10 @@ void Move1(void) {
         else {
             b1 = 2 * (before[1] - 48) - 1;
             b2 = 4 * (before[0] - 64) - 2;
-            if (*(*(pStr + b1) + (b2-1)) == '[') { printf("again\n"); continue; }
-            if (*(*(pStr + b1) + b2) == '.') { printf("again\n"); continue; }
+            if (*(*(pStr + b1) + (b2-1)) == '[') { printf("It is not yours\n\n"); continue; }
+            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; }
             else {
-                switch (*(*(pStr+b1)+b2)) {
+                switch (*(*(pStr+b1)+b2)) {  //ÀÌµ¿ °¡´ÉÇÑ °÷ *Ç¥½Ã
                     case 'P': { Pawn(b1,b2); break;}
                     case 'R': { Rook(b1,b2); break;}
                     case 'N': { Knight(b1,b2); break;}
@@ -174,20 +193,53 @@ void Move1(void) {
                     case 'Q': { Queen(b1,b2); break;}
                     case 'K': { King(b1,b2); break;}
                 }
-                clear();
-                Print();
-                break;
+
+                //ÀÌµ¿ ÈÄ check »óÅÂ°¡ µÇ´Â °÷Àº .À¸·Î º¯°æ
+                for(int i=0;i<8;i++) {
+                    for(int j=0;j<8;j++) {
+                        Checkbackpan(); //¸¶Áö¸·¿¡ ´Ù½Ã ÀÌ°É·Î µ¹·Á³ö!
+                        int checkx=-1, checky=-1; //checkx = j, checky = i
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                            *(*(pStr+(2*i+1))+(4*j+1)) = '<';
+                            *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+b1)+b2);
+                            *(*(pStr+(2*i+1))+(4*j+3)) = '>';
+                            *(*(pStr+b1)+(b2-1)) = *(*(pStr+b1)+b2) = *(*(pStr+b1)+(b2+1)) = '.';
+                            Delete_s();
+                            if ( Check(1) == 1 ) { checkx = j; checky = i; } //checkÀÎ °æ¿ì ÁÂÇ¥ ÀúÀå
+                            Returncheckpan();
+                            if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                        }
+                    }
+                }
+
+                //¿òÁúÀÏ ¼ö ÀÖ´Â °æ·Î°¡ ¾ø´Â °æ¿ì ´Ù½Ã
+                for(int i=0;i<8;i++) {
+                    for(int j=0;j<8;j++) {
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
+                            F += 1;
+                    }
+                }
+                if(F == 0) {
+                    printf("You can not move that!\n\n");
+                    continue;
+                }
+
+                else {
+                    F=0;
+                    clear();
+                    Print();
+                    break;}
             }
         }
     }
 
-    //ìê¸° ë§ ìˆëŠ” ê³³ ì„ íƒì‹œ ë‹¤ì‹œ
+    //ÀÚ±â ¸» ÀÖ´Â °÷ ¼±ÅÃ½Ã ´Ù½Ã
     while(1) {
         printf("< Player 1 >\nWhere? : ");
         scanf("%s", after);
         a1 = 2 * (after[1] - 48) - 1;
         a2 = 4 * (after[0] - 64) - 2;
-        if( *(*(pStr+b1)+b2) =='P' && a1==15) { //íŠ¹ìˆ˜ë£°
+        if( *(*(pStr+b1)+b2) =='P' && a1==15) { //Æ¯¼ö·ê
             char Change[2];
             clear();
             printf("change P to ? (Q or B or N or R) : ");
@@ -199,11 +251,16 @@ void Move1(void) {
         else { Delete_s(); break;}
     }
 
-    //ì™• ì¡ìœ¼ë©´ end
+    //King ¿òÁ÷ÀÎ °æ¿ì ÁÂÇ¥ ÀúÀå (for checkÈ®ÀÎ)
+    if (*(*(pStr+b1)+b2)=='K') {
+        kx1 = a1; ky1 = a2;
+    }
+
+    //¿Õ ÀâÀ¸¸é end
     if (*(*(pStr+a1)+ a2)=='K') end=1;
     *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
 
-    //ìë¦¬ ì˜®ê¸°ê¸°
+    //ÀÚ¸® ¿Å±â±â
     *(*(pStr+a1)+ ++a2) = '>'; a2--;
     *(*(pStr+a1)+ --a2) = '<';
     *(*(pStr+b1)+b2) = '.';
@@ -211,12 +268,13 @@ void Move1(void) {
     *(*(pStr+b1)+ --b2) = '.';
 }
 
-void Move2(void) { // 2 ì´ë™
+//player 2 ÀÌµ¿ÇÔ¼ö
+void Move2(void) { // 2 ÀÌµ¿
     char before[3], after[3];
     int a1,a2,b1,b2;
     Backpan();
 
-    // ë§ ì—†ëŠ” ì¥ì†Œ ì„ íƒì‹œ ë‹¤ì‹œ
+    // ¸» ¾ø´Â Àå¼Ò ¼±ÅÃ½Ã ´Ù½Ã
     while(1) {
         printf("[ Player 2 ]\n(save game board)\nWhat? : ");
         scanf("%s", before);
@@ -225,32 +283,67 @@ void Move2(void) { // 2 ì´ë™
             printf("S A V E . . . !\n");
             continue;
         }
-        b1 = 2 * (before[1] - 48) - 1;
-        b2 = 4 * (before[0] - 64) - 2;
-        if (*(*(pStr + b1) + (b2-1)) == '<') { printf("again\n"); continue; }
-        if (*(*(pStr + b1) + b2) == '.') { printf("again\n"); continue; }
         else {
-            switch (*(*(pStr+b1)+b2)) {
-                case 'P': { Pawn(b1,b2); break;}
-                case 'R': { Rook(b1,b2); break;}
-                case 'N': { Knight(b1,b2); break;}
-                case 'B': { Bishop(b1,b2); break;}
-                case 'Q': { Queen(b1,b2); break;}
-                case 'K': { King(b1,b2); break;}
+            b1 = 2 * (before[1] - 48) - 1;
+            b2 = 4 * (before[0] - 64) - 2;
+            if (*(*(pStr + b1) + (b2-1)) == '<') { printf("It is not yours\n\n"); continue; }
+            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; }
+            else {
+                switch (*(*(pStr+b1)+b2)) {
+                    case 'P': { Pawn(b1,b2); break;}
+                    case 'R': { Rook(b1,b2); break;}
+                    case 'N': { Knight(b1,b2); break;}
+                    case 'B': { Bishop(b1,b2); break;}
+                    case 'Q': { Queen(b1,b2); break;}
+                    case 'K': { King(b1,b2); break;}
+                }
+
+                //ÀÌµ¿ ÈÄ check »óÅÂ°¡ µÇ´Â °÷Àº .À¸·Î º¯°æ
+                for(int i=0;i<8;i++) {
+                    for(int j=0;j<8;j++) {
+                        Checkbackpan(); //¸¶Áö¸·¿¡ ´Ù½Ã ÀÌ°É·Î µ¹·Á³ö!
+                        int checkx=-1, checky=-1; //checkx = j, checky = i
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                            *(*(pStr+(2*i+1))+(4*j+1)) = '[';
+                            *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+b1)+b2);
+                            *(*(pStr+(2*i+1))+(4*j+3)) = ']';
+                            *(*(pStr+b1)+(b2-1)) = *(*(pStr+b1)+b2) = *(*(pStr+b1)+(b2+1)) = '.';
+                            Delete_s();
+                            if ( Check(2) == 1 ) { checkx = j; checky = i; } //checkÀÎ °æ¿ì ÁÂÇ¥ ÀúÀå
+                            Returncheckpan();
+                            if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                        }
+                    }
+                }
+
+                //¿òÁúÀÏ ¼ö ÀÖ´Â °æ·Î°¡ ¾ø´Â °æ¿ì
+                for(int i=0;i<8;i++) {
+                    for(int j=0;j<8;j++) {
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
+                            F += 1;
+                    }
+                }
+                if(F == 0) {
+                    printf("You can not move that!\n");
+                    continue;
+                }
+
+                else {
+                    F=0;
+                    clear();
+                    Print();
+                    break;}
             }
-            clear();
-            Print();
-            break;
         }
     }
 
-    //ë³¸ì¸ ë§ ìˆëŠ” ê³³ ì„ íƒì‹œ ë‹¤ì‹œ
+    //º»ÀÎ ¸» ÀÖ´Â °÷ ¼±ÅÃ½Ã ´Ù½Ã
     while(1) {
         printf("[ Player 2 ]\nWhere? : ");
         scanf("%s", after);
         a1=2*(after[1]-48)-1;
         a2=4*(after[0]-64)-2;
-        if( *(*(pStr+b1)+b2) == 'P' && a1==1) { //íŠ¹ìˆ˜ë£°
+        if( *(*(pStr+b1)+b2) == 'P' && a1==1) { //Æ¯¼ö·ê
             char Change[2];
             clear();
             printf("change P to ? (Q or B or N or R) : ");
@@ -262,10 +355,15 @@ void Move2(void) { // 2 ì´ë™
         else {Delete_s(); break;}
     }
 
-    // ì™• ì¡ìœ¼ë©´ end
+    //King ¿òÁ÷ÀÎ °æ¿ì ÁÂÇ¥ ÀúÀå (for checkÈ®ÀÎ)
+    if (*(*(pStr+b1)+b2)=='K') {
+        kx2 = a1; ky2 = a2;
+    }
+
+    // ¿Õ ÀâÀ¸¸é end
     if (*(*(pStr+a1)+ a2)=='K') end=2;
 
-    //ìë¦¬ ì˜®ê¸°ê¸°
+    //ÀÚ¸® ¿Å±â±â
     *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
     *(*(pStr+a1)+ ++a2) = ']'; a2--;
     *(*(pStr+a1)+ --a2) = '[';
@@ -337,7 +435,7 @@ void Rook(int b1, int b2) {
         while (1) {
             B2 -= 4;
             if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
-            else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') { //ì—¬ê¸° ì†ë´ì•¼í•´!!!!!!!!!! ?
+            else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') { //¿©±â ¼ÕºÁ¾ßÇØ!!!!!!!!!! ?
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
@@ -567,8 +665,6 @@ void King(int b1, int b2) {
 
 void Save(void) {
     FILE *fp = NULL;
-    char input[50];
-    int I=0;
     fp = fopen(SPAN, "w+");
 
     for(int i=0;i<17;i++) {
@@ -576,3 +672,229 @@ void Save(void) {
     }
     fclose(fp);
 }
+
+int Check(int player) { // kingÀÇ ÁÂÇ¥·Î check ¿©ºÎ È®ÀÎ
+    int c=0;
+    if(player==1) {
+        int x=kx1, y=ky1;
+
+        //¿À¸¥ÂÊ
+        for(int i=x;i<34;i+=4) {
+            if ( *(*(pStr+i)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(i-1))  == '[') {
+                if( *(*(pStr+y)+i) == 'R' || *(*(pStr+y)+i) == 'Q' ) {
+                    c++; break;
+                }
+            }
+        }
+
+        //¿ŞÂÊ
+        for(int i=x;i>=0;i-=4) {
+            if ( *(*(pStr+i)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(i-1))  == '[') {
+                if( *(*(pStr+y)+i) == 'R' || *(*(pStr+y)+i) == 'Q' ) {
+                    c++; break;
+                }
+            }
+        }
+
+        //À§
+        for(int i=y;i<17;i+=2) {
+            if ( *(*(pStr+i)+(x-1)) == '<') break;
+            else if( *(*(pStr+i)+(x-1))  == '[') {
+                if( *(*(pStr+i)+x) == 'R' || *(*(pStr+i)+x) == 'Q' ) {
+                    c++; break;
+                }
+            }
+        }
+
+        //¾Æ·¡
+        for(int i=y;i>=0;i-=2) {
+            if ( *(*(pStr+i)+(x-1)) == '<') break;
+            else if( *(*(pStr+i)+(x-1))  == '[') {
+                if( *(*(pStr+i)+x) == 'R' || *(*(pStr+i)+x) == 'Q' ) {
+                    c++; break;
+                }
+            }
+        }
+
+        //´ë°¢¼±1
+        int pp=0; //pawn È®ÀÎ¿ë
+        while(1) {
+            x += 4; y += 2; pp++;
+            if( *(*(pStr+y)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(x-1)) == '[') {
+                if ( *(*(pStr+y)+x) == 'P' && pp == 1) {
+                    printf("%d : %c\n", pp, *(*(pStr+y)+x));
+                    c++; break;
+                }
+                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                    c++; break;
+                }
+            }
+
+            if(x>33||y>16) {break;}
+        }
+
+        //´ë°¢¼±2
+        pp=0; //pawn È®ÀÎ¿ë
+        while(1) {
+            x -= 4; y += 2; pp++;
+            if( *(*(pStr+y)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(x-1)) == '[') {
+                if ( *(*(pStr+y)+x) == 'P' && pp == 1) {
+                    c++; break;
+                }
+                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                    c++; break;
+                }
+            }
+
+            if(x<0||y>16) break;
+        }
+
+        //´ë°¢¼±3
+        while(1) {
+            x -= 4; y -= 2;
+            if( *(*(pStr+y)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(x-1)) == '[') {
+                if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                    c++; break;
+                }
+            }
+
+            if(x<0||y<0) break;
+        }
+
+        //´ë°¢¼±4
+        while(1) {
+            x += 4; y -= 2;
+            if( *(*(pStr+y)+(x-1)) == '<') break;
+            else if( *(*(pStr+y)+(x-1)) == '[') {
+                if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                    c++; break;
+                }
+            }
+
+            if(x>33||y<0) break;
+        }
+    }
+
+    // PLAYER2 //
+    else {
+        int x = kx2, y = ky2;
+
+        //¿À¸¥ÂÊ
+        for (int i = x; i < 34; i += 4) {
+            if ( *(*(pStr+i)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (i - 1)) == '<') {
+                if (*(*(pStr + y) + i) == 'R' || *(*(pStr + y) + i) == 'Q') {
+                    c++;
+                    break;
+                }
+            }
+        }
+
+        //¿ŞÂÊ
+        for (int i = x; i >= 0; i -= 4) {
+            if ( *(*(pStr+i)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (i - 1)) == '<') {
+                if (*(*(pStr + y) + i) == 'R' || *(*(pStr + y) + i) == 'Q') {
+                    c++;
+                    break;
+                }
+            }
+        }
+
+        //À§
+        for (int i = y; i < 17; i += 2) {
+            if ( *(*(pStr+i)+(x-1)) == '[') break;
+            else if (*(*(pStr + i) + (x - 1)) == '<') {
+                if (*(*(pStr + i) + x) == 'R' || *(*(pStr + i) + x) == 'Q') {
+                    c++;
+                    break;
+                }
+            }
+        }
+
+        //¾Æ·¡
+        for (int i = y; i >= 0; i -= 2) {
+            if ( *(*(pStr+i)+(x-1)) == '[') break;
+            else if (*(*(pStr + i) + (x - 1)) == '<') {
+                if (*(*(pStr + i) + x) == 'R' || *(*(pStr + i) + x) == 'Q') {
+                    c++;
+                    break;
+                }
+            }
+        }
+
+        //´ë°¢¼±1
+        while (1) {
+            x += 4; y += 2;
+            if( *(*(pStr+y)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (x - 1)) == '<') {
+                if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
+                    c++;
+                    break;
+                }
+            }
+
+            if (x > 33 || y > 16) break;
+        }
+
+        //´ë°¢¼±2
+        while (1) {
+            x -= 4; y += 2;
+            if( *(*(pStr+y)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (x - 1)) == '<') {
+                if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
+                    c++;
+                    break;
+                }
+            }
+
+            if (x < 0 || y > 16) break;
+        }
+
+        //´ë°¢¼±3
+        int pp = 0; //pawn È®ÀÎ¿ë
+        while (1) {
+            x -= 4; y -= 2; pp++;
+            if( *(*(pStr+y)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (x - 1)) == '<') {
+                if (*(*(pStr + y) + x) == 'P' && pp == 1) {
+                    c++;
+                    break;
+                } else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
+                    c++;
+                    break;
+                }
+            }
+
+            if (x < 0 || y < 0) break;
+        }
+
+        //´ë°¢¼±4
+        pp = 0; //pawn È®ÀÎ¿ë
+        while (1) {
+            x += 4; y -= 2; pp++;
+            if( *(*(pStr+y)+(x-1)) == '[') break;
+            else if (*(*(pStr + y) + (x - 1)) == '<') {
+                if (*(*(pStr + y) + x) == 'P' && pp == 1) {
+                    c++;
+                    break;
+                } else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
+                    c++;
+                    break;
+                }
+            }
+
+            if (x > 33 || y < 0) break;
+        }
+    }
+
+    printf(" c : %d\n", c);
+    if(c != 0) return 1;
+    else return 0;
+}
+
