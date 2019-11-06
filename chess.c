@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <windows.h>
+#include <termio.h>
 
 char pan[17][34];
 char backpan[17][34];
@@ -14,6 +14,7 @@ static int F=0; // 움직일 수 있는 위치가 없을 때
 static int kx1=18; ky1=1; //player 1의 King 좌표
 static int kx2=18; ky2=15; //player 2의 King 좌표
 void clear() { system("clear"); } // clear함수
+char die1[20]={""}, die2[20]={""}; // 죽은 말 표시
 
 
 void Load(int); //파일 읽어서 배열, 포인터에 저장
@@ -33,6 +34,22 @@ void Bishop(int, int); //B 선택시
 void Queen(int, int); //Q 선택시
 void King(int, int); //K 선택시
 int Check(int); //check 여부 확인
+int Checkmate
+int getch() {
+    int ch;
+    struct termios buf;
+    struct termios save;
+
+    tcgetattr(0, &save);
+    buf = save;
+    buf.c_lflag &= ~(ICANON | ECHO);
+    buf.c_cc[VMIN] = 1;
+    buf.c_cc[VTIME] = 0;
+    tcsetattr(0, TCSAFLUSH, &buf);
+    ch = getchar();
+    tcsetattr(0, TCSAFLUSH, &save);
+    return ch;
+}
 
 
 int main() {
@@ -48,53 +65,55 @@ int main() {
             case 1: {
                 Load(1); Print();
                 while (1) {
-                    Move1(); /*clear();*/ Print();
-                    if(end!=0) {
-                       break;
+                    Move1();
+                    if(end==1||end==2) {
+                        printf("\nPlayer %d WIN!*\n\n",end); break;
                     }
+                    else if (end==3) {Save(); break;}
+                    clear(); Print();
 
-                    Move2(); clear(); Print();
-                    if(end!=0) {
-                        break;
+                    Move2();
+                    if(end==1||end==2) {
+                        printf("\nPlayer %d WIN!*\n\n",end); break;
                     }
+                    else if (end==3) {Save(); break;}
+                    clear(); Print();
+
                 }break;
             }
             case 2: {
                 Load(2); Print();
                 while (1) {
-                    Move1(); clear(); Print();
-                    if(end!=0) {
+                    Move1();
+                    if(end==1||end==2) {
                         printf("\nPlayer %d WIN!*\n\n",end); break;
                     }
-                    Move2(); clear(); Print();
-                    if(end!=0) break;
+                    else if (end==3) {Save(); break;}
+                    clear(); Print();
+
+                    Move2();
+                    if(end==1||end==2) {
+                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                    }
+                    else if (end==3) {Save(); break;}
+                    clear(); Print();
+
                 }break;
             }
             case 3: {
                 Rule();
-                printf("5\n");
-                Sleep(1000);
-                printf("4\n");
-                Sleep(1000);
-                printf("3\n");
-                Sleep(1000);
-                printf("2\n");
-                Sleep(1000);
-                printf("1\n");
-                Sleep(1000);
                 break;
             }
             default:
                 break;
         }
 
-        if (a==4) {
+        if (a==4||end==3) {
             printf("Thank you");
             break;
         }
 
     }
-
     return 0;
 }
 
@@ -114,16 +133,23 @@ void Load(int k) {
         strcpy(pan[I],input);
         I++;
     } fclose(fp);
+
     pStr = pan;
-}
+
+    strcpy(die1, "DIE-");
+    strcpy(die2, "DIE-");
+ }
 
 void Print(void) {
     int pnum=1;
+    //printf("  %s\n", die2);
+    if(strlen(die2) > 4) printf("%s\n", die2);
     printf("    A   B   C   D   E   F   G   H\n");
     for (int i=0;i<17;i++) {
         if (i%2==0) printf("  %s\n", *(pStr+i));
         else {printf("%d %s\n",pnum,*(pStr+i)); pnum++;}
     }
+    if(strlen(die1) > 4) printf("%s\n", die1);
 }
 
 void Backpan(void) {
@@ -150,6 +176,8 @@ void Rule(void) {
            "B can move any number of vacant squares in any diagonal direction.\n"
            "N can move one square along any rank or file and then at an angle. The knight´s movement can also be viewed as an “L” or “7″ laid out at any horizontal or vertical angle.\n"
            "P can move forward one square, if that square is unoccupied. \n(If it has not yet moved, the pawn can move two squares forward provided both squares in front of the pawn are unoccupied.)\n\n");
+    getch();
+    getch();
 }
 
 void Delete_s(void) {
@@ -167,17 +195,21 @@ void Delete_s(void) {
 //player 1 이동함수
 void Move1(void) {
     char before[5], after[5];
-    int b1,b2,a1,a2;
+    int b1=0, b2=0, a1=0, a2=0;
     Backpan();
 
     //말 없는 자리 선택시 다시
     while(1) {
-        printf("< Player 1 >\n(save: save game board)\nWhat? : ");
+        printf("< Player 1 >\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
         if (strcmp(before, "save") == 0) {
             Save();
             printf("S A V E . . . !\n");
             continue;
+        }
+        else if(strcmp(before, "exit") == 0) {
+            end += 3;
+            break;
         }
         else {
             b1 = 2 * (before[1] - 48) - 1;
@@ -235,6 +267,7 @@ void Move1(void) {
 
     //자기 말 있는 곳 선택시 다시
     while(1) {
+        if(end == 3) break;
         printf("< Player 1 >\nWhere? : ");
         scanf("%s", after);
         a1 = 2 * (after[1] - 48) - 1;
@@ -251,37 +284,51 @@ void Move1(void) {
         else { Delete_s(); break;}
     }
 
-    //King 움직인 경우 좌표 저장 (for check확인)
+    if(end!=3){
+        //King 움직인 경우 좌표 저장 (for check확인)
     if (*(*(pStr+b1)+b2)=='K') {
         kx1 = a1; ky1 = a2;
     }
 
     //왕 잡으면 end
     if (*(*(pStr+a1)+ a2)=='K') end=1;
-    *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
 
     //자리 옮기기
+    if (*(*(pStr+a1)+(a2-1)) == '[') {
+        switch (backpan[a1][a2]) {
+            case 'P': { strcat(die2, "[P]"); break; }
+            case 'R': { strcat(die2, "[R]"); break; }
+            case 'B': { strcat(die2, "[B]"); break; }
+            case 'N': { strcat(die2, "[N]"); break; }
+            case 'Q': { strcat(die2, "[Q]"); break; }
+        }
+    }
+    *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
     *(*(pStr+a1)+ ++a2) = '>'; a2--;
     *(*(pStr+a1)+ --a2) = '<';
     *(*(pStr+b1)+b2) = '.';
     *(*(pStr+b1)+ ++b2) = '.'; b2--;
-    *(*(pStr+b1)+ --b2) = '.';
+    *(*(pStr+b1)+ --b2) = '.';}
 }
 
 //player 2 이동함수
 void Move2(void) { // 2 이동
     char before[3], after[3];
-    int a1,a2,b1,b2;
+    int a1=0, a2=0, b1=0, b2=0;
     Backpan();
 
     // 말 없는 장소 선택시 다시
     while(1) {
-        printf("[ Player 2 ]\n(save game board)\nWhat? : ");
+        printf("[ Player 2 ]\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
         if (strcmp(before, "save") == 0) {
             Save();
             printf("S A V E . . . !\n");
             continue;
+        }
+        else if(strcmp(before, "exit") == 0) {
+            end += 3;
+            break;
         }
         else {
             b1 = 2 * (before[1] - 48) - 1;
@@ -339,6 +386,7 @@ void Move2(void) { // 2 이동
 
     //본인 말 있는 곳 선택시 다시
     while(1) {
+        if (end==3) break;
         printf("[ Player 2 ]\nWhere? : ");
         scanf("%s", after);
         a1=2*(after[1]-48)-1;
@@ -355,7 +403,8 @@ void Move2(void) { // 2 이동
         else {Delete_s(); break;}
     }
 
-    //King 움직인 경우 좌표 저장 (for check확인)
+    if (end != 3){
+        //King 움직인 경우 좌표 저장 (for check확인)
     if (*(*(pStr+b1)+b2)=='K') {
         kx2 = a1; ky2 = a2;
     }
@@ -363,13 +412,24 @@ void Move2(void) { // 2 이동
     // 왕 잡으면 end
     if (*(*(pStr+a1)+ a2)=='K') end=2;
 
+
     //자리 옮기기
+        if (*(*(pStr+a1)+(a2-1)) == '<') {
+            switch (backpan[a1][a2]) {
+                case 'P': { strcat(die1, "<P>"); break; }
+                case 'R': { strcat(die1, "<R>"); break; }
+                case 'B': { strcat(die1, "<B>"); break; }
+                case 'N': { strcat(die1, "<N>"); break; }
+                case 'Q': { strcat(die1, "<Q>"); break; }
+            }
+        }
+
     *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
     *(*(pStr+a1)+ ++a2) = ']'; a2--;
     *(*(pStr+a1)+ --a2) = '[';
     *(*(pStr+b1)+b2) = '.';
     *(*(pStr+b1)+ ++b2) = '.'; b2--;
-    *(*(pStr+b1)+ --b2) = '.';
+    *(*(pStr+b1)+ --b2) = '.';}
 }
 
 void Pawn(int b1, int b2) {
@@ -404,7 +464,8 @@ void Rook(int b1, int b2) {
     if (*(*(pStr + B1) + (B2 - 1)) == '<') { // Player 1
         while (1) {
             B1 += 2;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1 > 16) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -414,7 +475,8 @@ void Rook(int b1, int b2) {
         B1 = b1;
         while (1) {
             B1 -= 2;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B1 < 0) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -424,7 +486,8 @@ void Rook(int b1, int b2) {
         B1 = b1;
         while (1) {
             B2 += 4;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 > 33) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -434,7 +497,8 @@ void Rook(int b1, int b2) {
         B2 = b2;
         while (1) {
             B2 -= 4;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2<0) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') { //여기 손봐야해!!!!!!!!!! ?
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -445,7 +509,8 @@ void Rook(int b1, int b2) {
     else { // Player 2
         while (1) {
             B1 += 2;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1 > 16) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -455,7 +520,8 @@ void Rook(int b1, int b2) {
         B1 = b1;
         while (1) {
             B1 -= 2;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1<0) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -465,7 +531,8 @@ void Rook(int b1, int b2) {
         B1 = b1;
         while (1) {
             B2 += 4;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 > 33) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -475,7 +542,8 @@ void Rook(int b1, int b2) {
         B2 = b2;
         while (1) {
             B2 -= 4;
-            if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 < 0) break;
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
                 *(*(pStr + B1) + B2) = '*';
                 break;
@@ -492,7 +560,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 += 2;
             B2 += 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 > 16 || B2 > 33) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -507,7 +576,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 += 2;
             B2 -= 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 > 16 || B2 < 0) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -522,7 +592,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 -= 2;
             B2 += 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 < 0 || B2 > 33) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -537,7 +608,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 -= 2;
             B2 -= 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 < 0 || B2 < 0) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -553,7 +625,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 += 2;
             B2 += 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 > 16 || B2 > 33) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -568,7 +641,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 += 2;
             B2 -= 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 > 16 || B2 < 0) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -583,7 +657,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 -= 2;
             B2 += 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 < 0 || B2 > 33) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -598,7 +673,8 @@ void Bishop(int b1, int b2) {
         while (1) {
             B1 -= 2;
             B2 -= 4;
-            if(*(*(pStr+B1)+B2) == '.') {
+            if (B1 < 0 || B2 < 0) break;
+            else if(*(*(pStr+B1)+B2) == '.') {
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
@@ -614,25 +690,27 @@ void Bishop(int b1, int b2) {
 void Knight(int b1, int b2) {
 
     if(*(*(pStr+b1)+(b2-1)) == '<') {
-        if( *(*(pStr+(b1+4))+(b2+3)) != '<' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+4))+(b2-5)) != '<' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+7)) != '<' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-9)) != '<' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
-        if( *(*(pStr+(b1-4))+(b2+3)) != '<' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-4))+(b2-5)) != '<' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+7)) != '<' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-9)) != '<' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
+
+        if( *(*(pStr+(b1+4))+(b2+3)) == '[' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
+        if( *(*(pStr+(b1+4))+(b2-5)) == '[' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
+        if( *(*(pStr+(b1+2))+(b2+7)) == '[' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
+        if( *(*(pStr+(b1+2))+(b2-9)) == '[' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
+        if( *(*(pStr+(b1-4))+(b2+3)) == '[' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
+        if( *(*(pStr+(b1-4))+(b2-5)) == '[' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
+        if( *(*(pStr+(b1-2))+(b2+7)) == '[' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
+        if( *(*(pStr+(b1-2))+(b2-9)) == '[' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
     }
     else {
-        if( *(*(pStr+(b1+4))+(b2+3)) != '[' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+4))+(b2-5)) != '[' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+7)) != '[' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-9)) != '[' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
-        if( *(*(pStr+(b1-4))+(b2+3)) != '[' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-4))+(b2-5)) != '[' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+7)) != '[' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-9)) != '[' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
+        if( *(*(pStr+(b1+4))+(b2+3)) == '<' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
+        if( *(*(pStr+(b1+4))+(b2-5)) == '<' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
+        if( *(*(pStr+(b1+2))+(b2+7)) == '<' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
+        if( *(*(pStr+(b1+2))+(b2-9)) == '<' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
+        if( *(*(pStr+(b1-4))+(b2+3)) == '<' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
+        if( *(*(pStr+(b1-4))+(b2-5)) == '<' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
+        if( *(*(pStr+(b1-2))+(b2+7)) == '<' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
+        if( *(*(pStr+(b1-2))+(b2-9)) == '<' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
     }
+
 }
 
 void Queen(int b1, int b2) {
@@ -735,6 +813,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if(x>33||y>16) {break;}
         }
+        x=kx1, y=ky1;
 
         //대각선2
         pp=0; //pawn 확인용
@@ -752,6 +831,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if(x<0||y>16) break;
         }
+        x=kx1, y=ky1;
 
         //대각선3
         while(1) {
@@ -765,6 +845,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if(x<0||y<0) break;
         }
+        x=kx1, y=ky1;
 
         //대각선4
         while(1) {
@@ -778,6 +859,18 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if(x>33||y<0) break;
         }
+
+        x=kx1, y=ky1;
+
+        //knight
+        if( *(*(pStr+(y+4))+(x+3)) == '[' && *(*(pStr+(y+4))+(x+4)) == 'N' ) c++;
+        if( *(*(pStr+(y+4))+(x-5)) == '[' && *(*(pStr+(y+4))+(x-4)) == 'N' ) c++;
+        if( *(*(pStr+(y-2))+(x-9)) == '[' && *(*(pStr+(y-2))+(x-8)) == 'N' ) c++;
+        if( *(*(pStr+(y+2))+(x+7)) == '[' && *(*(pStr+(y+2))+(x+8)) == 'N' ) c++;
+        if( *(*(pStr+(y+2))+(x-9)) == '[' && *(*(pStr+(y+2))+(x-8)) == 'N' ) c++;
+        if( *(*(pStr+(y-4))+(x+3)) == '[' && *(*(pStr+(y-4))+(x+4)) == 'N' ) c++;
+        if( *(*(pStr+(y-4))+(x-5)) == '[' && *(*(pStr+(y-4))+(x-4)) == 'N' ) c++;
+        if( *(*(pStr+(y-2))+(x+7)) == '[' && *(*(pStr+(y-2))+(x+8)) == 'N' ) c++;
     }
 
     // PLAYER2 //
@@ -841,6 +934,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if (x > 33 || y > 16) break;
         }
+        x=kx1, y=ky1;
 
         //대각선2
         while (1) {
@@ -855,6 +949,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if (x < 0 || y > 16) break;
         }
+        x=kx1, y=ky1;
 
         //대각선3
         int pp = 0; //pawn 확인용
@@ -873,6 +968,7 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if (x < 0 || y < 0) break;
         }
+        x=kx1, y=ky1;
 
         //대각선4
         pp = 0; //pawn 확인용
@@ -891,10 +987,21 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
             if (x > 33 || y < 0) break;
         }
+
+        x=kx1, y=ky1;
+
+        //knight
+        if( *(*(pStr+(y+4))+(x+3)) == '<' && *(*(pStr+(y+4))+(x+4)) == 'N' ) c++;
+        if( *(*(pStr+(y+4))+(x-5)) == '<' && *(*(pStr+(y+4))+(x-4)) == 'N' ) c++;
+        if( *(*(pStr+(y-2))+(x-9)) == '<' && *(*(pStr+(y-2))+(x-8)) == 'N' ) c++;
+        if( *(*(pStr+(y+2))+(x+7)) == '<' && *(*(pStr+(y+2))+(x+8)) == 'N' ) c++;
+        if( *(*(pStr+(y+2))+(x-9)) == '<' && *(*(pStr+(y+2))+(x-8)) == 'N' ) c++;
+        if( *(*(pStr+(y-4))+(x+3)) == '<' && *(*(pStr+(y-4))+(x+4)) == 'N' ) c++;
+        if( *(*(pStr+(y-4))+(x-5)) == '<' && *(*(pStr+(y-4))+(x-4)) == 'N' ) c++;
+        if( *(*(pStr+(y-2))+(x+7)) == '<' && *(*(pStr+(y-2))+(x+8)) == 'N' ) c++;
+
     }
 
-    printf(" c : %d\n", c);
     if(c != 0) return 1;
     else return 0;
 }
-
