@@ -11,8 +11,8 @@ char PAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess.txt";
 char SPAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess_save.txt";
 static int end; // King 잡은 player 확인용
 static int F=0; // 움직일 수 있는 위치가 없을 때
-static int kx1=18; ky1=1; //player 1의 King 좌표
-static int kx2=18; ky2=15; //player 2의 King 좌표
+static int kx1=18, ky1=1; //player 1의 King 좌표
+static int kx2=18, ky2=15; //player 2의 King 좌표
 void clear() { system("clear"); } // clear함수
 char die1[20]={""}, die2[20]={""}; // 죽은 말 표시
 
@@ -202,6 +202,7 @@ void Move1(void) {
     while(1) {
 
         if(Checkmate(1) == 0) { end = 2; break;}
+        for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);}
 
         printf("< Player 1 >\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
@@ -287,31 +288,32 @@ void Move1(void) {
         else { Delete_s(); break;}
     }
 
-    if( end!=3 && end!=2 ){
+    if( end!=3 && end!=2 ) {
+
         //King 움직인 경우 좌표 저장 (for check확인)
-    if (*(*(pStr+b1)+b2)=='K') {
-        kx1 = a1; ky1 = a2;
-    }
-
-    //왕 잡으면 end
-    if (*(*(pStr+a1)+ a2)=='K') end=1;
-
-    //자리 옮기기
-    if (*(*(pStr+a1)+(a2-1)) == '[') {
-        switch (backpan[a1][a2]) {
-            case 'P': { strcat(die2, "[P]"); break; }
-            case 'R': { strcat(die2, "[R]"); break; }
-            case 'B': { strcat(die2, "[B]"); break; }
-            case 'N': { strcat(die2, "[N]"); break; }
-            case 'Q': { strcat(die2, "[Q]"); break; }
+        if (*(*(pStr+b1)+b2)=='K') {
+            kx1 = a1; ky1 = a2;
         }
-    }
-    *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
-    *(*(pStr+a1)+ ++a2) = '>'; a2--;
-    *(*(pStr+a1)+ --a2) = '<';
-    *(*(pStr+b1)+b2) = '.';
-    *(*(pStr+b1)+ ++b2) = '.'; b2--;
-    *(*(pStr+b1)+ --b2) = '.';
+
+        //왕 잡으면 end
+        if (*(*(pStr+a1)+ a2)=='K') end=1;
+
+        //자리 옮기기
+        if (*(*(pStr+a1)+(a2-1)) == '[') {
+            switch (backpan[a1][a2]) {
+                case 'P': { strcat(die2, "[P]"); break; }
+                case 'R': { strcat(die2, "[R]"); break; }
+                case 'B': { strcat(die2, "[B]"); break; }
+                case 'N': { strcat(die2, "[N]"); break; }
+                case 'Q': { strcat(die2, "[Q]"); break; }
+            }
+        }
+        *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
+        *(*(pStr+a1)+ ++a2) = '>'; a2--;
+        *(*(pStr+a1)+ --a2) = '<';
+        *(*(pStr+b1)+b2) = '.';
+        *(*(pStr+b1)+ ++b2) = '.'; b2--;
+        *(*(pStr+b1)+ --b2) = '.';
     }
 }
 
@@ -325,6 +327,7 @@ void Move2(void) { // 2 이동
     while(1) {
 
         if(Checkmate(2) == 0) { end = 1; break;}
+        for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);}
 
         printf("[ Player 2 ]\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
@@ -410,17 +413,18 @@ void Move2(void) { // 2 이동
         else {Delete_s(); break;}
     }
 
-    if (end != 3 && end != 1){
+    if (end != 3 && end != 1) {
+
         //King 움직인 경우 좌표 저장 (for check확인)
-    if (*(*(pStr+b1)+b2)=='K') {
-        kx2 = a1; ky2 = a2;
-    }
+        if (*(*(pStr+b1)+b2)=='K') {
+            kx2 = a1; ky2 = a2;
+        }
 
-    // 왕 잡으면 end
-    if (*(*(pStr+a1)+ a2)=='K') end=2;
+        // 왕 잡으면 end
+        if (*(*(pStr+a1)+ a2)=='K') end=2;
 
 
-    //자리 옮기기
+        //자리 옮기기
         if (*(*(pStr+a1)+(a2-1)) == '<') {
             switch (backpan[a1][a2]) {
                 case 'P': { strcat(die1, "<P>"); break; }
@@ -431,12 +435,13 @@ void Move2(void) { // 2 이동
             }
         }
 
-    *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
-    *(*(pStr+a1)+ ++a2) = ']'; a2--;
-    *(*(pStr+a1)+ --a2) = '[';
-    *(*(pStr+b1)+b2) = '.';
-    *(*(pStr+b1)+ ++b2) = '.'; b2--;
-    *(*(pStr+b1)+ --b2) = '.';}
+        *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
+        *(*(pStr+a1)+ ++a2) = ']'; a2--;
+        *(*(pStr+a1)+ --a2) = '[';
+        *(*(pStr+b1)+b2) = '.';
+        *(*(pStr+b1)+ ++b2) = '.'; b2--;
+        *(*(pStr+b1)+ --b2) = '.';
+    }
 }
 
 void Pawn(int b1, int b2) {
@@ -817,7 +822,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     c++; break;
                 }
             }
-
             if(x>33||y>16) {break;}
         }
         x=kx1, y=ky1;
@@ -835,7 +839,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     c++; break;
                 }
             }
-
             if(x<0||y>16) break;
         }
         x=kx1, y=ky1;
@@ -849,7 +852,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     c++; break;
                 }
             }
-
             if(x<0||y<0) break;
         }
         x=kx1, y=ky1;
@@ -863,12 +865,10 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     c++; break;
                 }
             }
-
             if(x>33||y<0) break;
         }
 
         x=kx1, y=ky1;
-
         //knight
         if( *(*(pStr+(y+4))+(x+3)) == '[' && *(*(pStr+(y+4))+(x+4)) == 'N' ) c++;
         if( *(*(pStr+(y+4))+(x-5)) == '[' && *(*(pStr+(y+4))+(x-4)) == 'N' ) c++;
@@ -938,7 +938,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     break;
                 }
             }
-
             if (x > 33 || y > 16) break;
         }
         x=kx1, y=ky1;
@@ -953,7 +952,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     break;
                 }
             }
-
             if (x < 0 || y > 16) break;
         }
         x=kx1, y=ky1;
@@ -972,7 +970,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     break;
                 }
             }
-
             if (x < 0 || y < 0) break;
         }
         x=kx1, y=ky1;
@@ -991,7 +988,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
                     break;
                 }
             }
-
             if (x > 33 || y < 0) break;
         }
 
@@ -1006,7 +1002,6 @@ int Check(int player) { // king의 좌표로 check 여부 확인
         if( *(*(pStr+(y-4))+(x+3)) == '<' && *(*(pStr+(y-4))+(x+4)) == 'N' ) c++;
         if( *(*(pStr+(y-4))+(x-5)) == '<' && *(*(pStr+(y-4))+(x-4)) == 'N' ) c++;
         if( *(*(pStr+(y-2))+(x+7)) == '<' && *(*(pStr+(y-2))+(x+8)) == 'N' ) c++;
-
     }
 
     if(c != 0) return 1;
@@ -1060,7 +1055,6 @@ int Checkmate(int player) {
                         for(int k=0;k<17;k++) strcpy(pan[k], backpan[k]);
                         continue;
                     }
-
                 }
             }
         }
@@ -1110,13 +1104,13 @@ int Checkmate(int player) {
 
                     if(F!=0) {F=0; return 1;}
                     else {
-                        for(int k=0;k<17;k++) strcpy(pan[k], backpan[k]);
+
                         continue;
                     }
-
                 }
             }
         }
         if (F==0) return F;
     }
 }
+
