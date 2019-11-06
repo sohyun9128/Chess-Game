@@ -34,7 +34,7 @@ void Bishop(int, int); //B 선택시
 void Queen(int, int); //Q 선택시
 void King(int, int); //K 선택시
 int Check(int); //check 여부 확인
-int Checkmate
+int Checkmate(int); //종료 조건
 int getch() {
     int ch;
     struct termios buf;
@@ -67,14 +67,14 @@ int main() {
                 while (1) {
                     Move1();
                     if(end==1||end==2) {
-                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                        break;
                     }
                     else if (end==3) {Save(); break;}
                     clear(); Print();
 
                     Move2();
                     if(end==1||end==2) {
-                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                        break;
                     }
                     else if (end==3) {Save(); break;}
                     clear(); Print();
@@ -86,14 +86,14 @@ int main() {
                 while (1) {
                     Move1();
                     if(end==1||end==2) {
-                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                        break;
                     }
                     else if (end==3) {Save(); break;}
                     clear(); Print();
 
                     Move2();
                     if(end==1||end==2) {
-                        printf("\nPlayer %d WIN!*\n\n",end); break;
+                        break;
                     }
                     else if (end==3) {Save(); break;}
                     clear(); Print();
@@ -200,6 +200,9 @@ void Move1(void) {
 
     //말 없는 자리 선택시 다시
     while(1) {
+
+        if(Checkmate(1) == 0) { end = 2; break;}
+
         printf("< Player 1 >\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
         if (strcmp(before, "save") == 0) {
@@ -267,7 +270,7 @@ void Move1(void) {
 
     //자기 말 있는 곳 선택시 다시
     while(1) {
-        if(end == 3) break;
+        if(end == 3||end == 2) break;
         printf("< Player 1 >\nWhere? : ");
         scanf("%s", after);
         a1 = 2 * (after[1] - 48) - 1;
@@ -284,7 +287,7 @@ void Move1(void) {
         else { Delete_s(); break;}
     }
 
-    if(end!=3){
+    if( end!=3 && end!=2 ){
         //King 움직인 경우 좌표 저장 (for check확인)
     if (*(*(pStr+b1)+b2)=='K') {
         kx1 = a1; ky1 = a2;
@@ -308,7 +311,8 @@ void Move1(void) {
     *(*(pStr+a1)+ --a2) = '<';
     *(*(pStr+b1)+b2) = '.';
     *(*(pStr+b1)+ ++b2) = '.'; b2--;
-    *(*(pStr+b1)+ --b2) = '.';}
+    *(*(pStr+b1)+ --b2) = '.';
+    }
 }
 
 //player 2 이동함수
@@ -319,6 +323,9 @@ void Move2(void) { // 2 이동
 
     // 말 없는 장소 선택시 다시
     while(1) {
+
+        if(Checkmate(2) == 0) { end = 1; break;}
+
         printf("[ Player 2 ]\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
         if (strcmp(before, "save") == 0) {
@@ -386,7 +393,7 @@ void Move2(void) { // 2 이동
 
     //본인 말 있는 곳 선택시 다시
     while(1) {
-        if (end==3) break;
+        if (end==3||end==1) break;
         printf("[ Player 2 ]\nWhere? : ");
         scanf("%s", after);
         a1=2*(after[1]-48)-1;
@@ -403,7 +410,7 @@ void Move2(void) { // 2 이동
         else {Delete_s(); break;}
     }
 
-    if (end != 3){
+    if (end != 3 && end != 1){
         //King 움직인 경우 좌표 저장 (for check확인)
     if (*(*(pStr+b1)+b2)=='K') {
         kx2 = a1; ky2 = a2;
@@ -1004,4 +1011,112 @@ int Check(int player) { // king의 좌표로 check 여부 확인
 
     if(c != 0) return 1;
     else return 0;
+}
+
+int Checkmate(int player) {
+    if(player == 1) {
+        Backpan();
+
+        for(int I=1;I<17;I+=2) {
+            for(int J=2;J<34;J+=4) {
+                if ( *(*(pStr+I)+(J-1)) == '<' ) {
+                    switch (*(*(pStr+I)+J)) {
+                        case 'P': { Pawn(I,J); break;}
+                        case 'R': { Rook(I,J); break;}
+                        case 'N': { Knight(I,J); break;}
+                        case 'B': { Bishop(I,J); break;}
+                        case 'Q': { Queen(I,J); break;}
+                        case 'K': { King(I,J); break;}
+                    }
+
+                    //이동 후 check 상태가 되는 곳은 .으로 변경
+                    for(int i=0;i<8;i++) {
+                        for(int j=0;j<8;j++) {
+                            Checkbackpan(); //마지막에 다시 이걸로 돌려놔!
+                            int checkx=-1, checky=-1; //checkx = j, checky = i
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                                *(*(pStr+(2*i+1))+(4*j+1)) = '<';
+                                *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+I)+J);
+                                *(*(pStr+(2*i+1))+(4*j+3)) = '>';
+                                *(*(pStr+I)+(J-1)) = *(*(pStr+I)+J) = *(*(pStr+I)+(J+1)) = '.';
+                                Delete_s();
+                                if ( Check(1) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                                Returncheckpan();
+                                if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                            }
+                        }
+                    }
+
+                    //움질일 수 있는 경로가 없는 경우 다시
+                    for(int i=0;i<8;i++) {
+                        for(int j=0;j<8;j++) {
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
+                                F += 1;
+                        }
+                    }
+
+                    if(F!=0) {F=0; return 1;}
+                    else {
+                        for(int k=0;k<17;k++) strcpy(pan[k], backpan[k]);
+                        continue;
+                    }
+
+                }
+            }
+        }
+        if (F==0) return F;
+    }
+
+    else {
+        Backpan();
+
+        for(int I=1;I<17;I+=2) {
+            for(int J=2;J<34;J+=4) {
+                if ( *(*(pStr+I)+(J-1)) == '[' ) {
+                    switch (*(*(pStr+I)+J)) {
+                        case 'P': { Pawn(I,J); break;}
+                        case 'R': { Rook(I,J); break;}
+                        case 'N': { Knight(I,J); break;}
+                        case 'B': { Bishop(I,J); break;}
+                        case 'Q': { Queen(I,J); break;}
+                        case 'K': { King(I,J); break;}
+                    }
+
+                    //이동 후 check 상태가 되는 곳은 .으로 변경
+                    for(int i=0;i<8;i++) {
+                        for(int j=0;j<8;j++) {
+                            Checkbackpan(); //마지막에 다시 이걸로 돌려놔!
+                            int checkx=-1, checky=-1; //checkx = j, checky = i
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                                *(*(pStr+(2*i+1))+(4*j+1)) = '[';
+                                *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+I)+J);
+                                *(*(pStr+(2*i+1))+(4*j+3)) = ']';
+                                *(*(pStr+I)+(J-1)) = *(*(pStr+I)+J) = *(*(pStr+I)+(J+1)) = '.';
+                                Delete_s();
+                                if ( Check(2) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                                Returncheckpan();
+                                if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                            }
+                        }
+                    }
+
+                    //움질일 수 있는 경로가 없는 경우 다시
+                    for(int i=0;i<8;i++) {
+                        for(int j=0;j<8;j++) {
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
+                                F += 1;
+                        }
+                    }
+
+                    if(F!=0) {F=0; return 1;}
+                    else {
+                        for(int k=0;k<17;k++) strcpy(pan[k], backpan[k]);
+                        continue;
+                    }
+
+                }
+            }
+        }
+        if (F==0) return F;
+    }
 }
