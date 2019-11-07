@@ -1,106 +1,112 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <termio.h>
-
-char pan[17][34];
-char backpan[17][34];
-char checkbackpan[17][34];
-char (*pStr)[34]; //���� �� ����� ���
-char PAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess.txt";
-char SPAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess_save.txt";
-static int end; // King ���� player Ȯ�ο�
-static int F=0; // ������ �� �ִ� ��ġ�� ���� ��
-static int kx1=18, ky1=1; //player 1�� King ��ǥ
-static int kx2=18, ky2=15; //player 2�� King ��ǥ
-void clear() { system("clear"); } // clear�Լ�
-char die1[20]={""}, die2[20]={""}; // ���� �� ǥ��
+#include <stdio.h> //printf(). scanf(), fopen(), fscanf(), fprintf() 등 실행에 주가 되는 함수를 위함
+#include <string.h> //체스판과 데이터를 저장하고 변경하는 과정에 있어서 필요한 strcpy(), strcat(), strcmp(), strlen()를 위함
+#include <stdlib.h> //system("clear")를 위함
+#include <termio.h> // getch() 함수를 정의하기 위해 필요한 tcgetattr(), ICANON, ECHO, VMIN, VTIME, tcsetattr(), TCSAFLUSH를 위함
 
 
-void Load(int); //���� �о �迭, �����Ϳ� ����
-void Print(void); //���� �� ���
-void Backpan(void); //�ǵ������ �� ����
-void Checkbackpan(void); //�ǵ������ �� ����
-void Returncheckpan(void); //�� �ǵ�����
-void Rule(void); //���� ���
-void Save(void); //����
-void Delete_s(void); // *ǥ�� ������ ������
-void Move1(void); //Player1 �̵�
-void Move2(void); //Player2 �̵�
-void Pawn(int, int); //P ���ý�
-void Rook(int, int); //R ���ý�
-void Knight(int, int); //N ���ý�
-void Bishop(int, int); //B ���ý�
-void Queen(int, int); //Q ���ý�
-void King(int, int); //K ���ý�
-int Check(int); //check ���� Ȯ��
-int Checkmate(int); //���� ����
+char pan[17][34]; //실행중인 체스판
+char backpan[17][34]; //되돌리기 위한 백그라운드 저장용 체스판
+char checkbackpan[17][34]; //check여부 확인 시 사용할 체스판
+char (*pStr)[34]; //현재 맵 변경시 사용 (pan[0][0]을 포인트한다)
+char PAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess.txt"; // 새 게임용 체스판
+char SPAN[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess_save.txt"; // 저장된 체스판
+static int end; // 승리한 player 확인용 (1 : player 1 승, 2 : player 2 승, 3 : 강제종료)
+static int F=0; // 선택한 말이 움직일 수 있는 위치가 없을 때 F=0 -> 다시 말 선택
+static int kx1=18, ky1=1; //player 1의 King 좌표 (check여부 확인시 이용)
+static int kx2=18, ky2=15; //player 2의 King 좌표 (check여부 확인시 이용)
+void clear() { system("clear"); } // clear함수 (화면을 깨끗하게 함)
+char die1[20]={""}, die2[20]={""}; // 죽은 말 표시
+
+
+void Load(int); // 게임을 시작하기 전 필요한 과정
+void Print(void); //현재 판 출력
+void Backpan(void); //되돌리기용 판 저장
+void Checkbackpan(void); //되돌리기용 판 저장
+void Returncheckpan(void); //판 되돌리기
+void Rule(void); //도움말 출력
+void Save(void); //저장
+void Delete_s(void); // *표시 원래(. 또는 말)로 돌리기
+void Move1(void); //Player1 이동
+void Move2(void); //Player2 이동
+void Pawn(int, int); //P 선택시 이동 가능 위치 *로 표시
+void Rook(int, int); //R 선택시 이동 가능 위치 *로 표시
+void Knight(int, int); //N 선택시 이동 가능 위치 *로 표시
+void Bishop(int, int); //B 선택시 이동 가능 위치 *로 표시
+void Queen(int, int); //Q 선택시 이동 가능 위치 *로 표시
+void King(int, int); //K 선택시 이동 가능 위치 *로 표시
+int Check(int); //check 여부 확인
+int Checkmate(int); //종료 조건
 int getch() {
     int ch;
-    struct termios buf;
-    struct termios save;
+    struct termios buf, save;
 
-    tcgetattr(0, &save);
+    tcgetattr(0, &save); // 현재 터미널 설정 읽음
     buf = save;
-    buf.c_lflag &= ~(ICANON | ECHO);
-    buf.c_cc[VMIN] = 1;
-    buf.c_cc[VTIME] = 0;
-    tcsetattr(0, TCSAFLUSH, &buf);
-    ch = getchar();
-    tcsetattr(0, TCSAFLUSH, &save);
+    buf.c_lflag &= ~(ICANON | ECHO); // CANONICAL과 ECHO 끔
+    buf.c_cc[VMIN] = 1; // 최소 입력 문자 수를 1로 설정
+    buf.c_cc[VTIME] = 0; // 최소 읽기 대기 시간을 0으로 설정
+    tcsetattr(0, TCSAFLUSH, &buf); // 터미널에 설정 입력
+    ch = getchar(); // 키보드 입력 읽음
+    tcsetattr(0, TCSAFLUSH, &save); // 원래의 설정으로 복구
     return ch;
 }
 
 
 int main() {
-    int a=0;
+    int a=0; // 메뉴 선택용 변수
 
     while (1) {
-        clear();
-        if (end != 0) {printf("\nPlayer %d WIN!\n\n",end); end=0;}
-        printf("+---- MANU ----+\n|  1.New game  |\n|  2.Lord game |\n|    3.Help    |\n|    4.Exit    |\n+--------------+\n");
+        clear(); //화면정리
+        if (end == 1 || end == 2) {printf("\nPlayer %d WIN!\n\n",end); end=0;} //이전 판 승리자 표시 (처음 게임 실행 시 프린트 되지 않음)
+        printf("+---- MANU ----+\n|  1.New game  |\n|  2.Load game |\n|    3.Help    |\n|    4.Exit    |\n+--------------+\n");
         printf("Maun Number : ");
-        scanf("%d", &a); clear();
+        scanf("%d", &a); clear(); // 메뉴 선택
         switch (a) {
-            case 1: {
-                Load(1); Print();
+            case 1: { // New game
+                Load(1); Print(); //새 게임 판을 로드하여 프린트
                 while (1) {
-                    Move1();
-                    if(end==1||end==2) {
-                        break;
-                    }
-                    else if (end==3) {Save(); break;}
-                    clear(); Print();
+                    Move1(); //player 1 이동
 
-                    Move2();
-                    if(end==1||end==2) {
+                    if(end==1||end==2) { //만약 king이 잡히거나 checkmate상태가 되면 게임 종료
                         break;
                     }
-                    else if (end==3) {Save(); break;}
-                    clear(); Print();
+                    else if (end==3) {Save(); break;} //사용자가 exit 입력시 자동 저장 후 게임 종료
+
+                    clear(); Print(); //이동 후 변경된 체스판을 정리된 화면에 프린트
+
+                    Move2(); //player 2 이동
+                    if(end==1||end==2) { //만약 king이 잡히거나 checkmate상태가 되면 게임 종료
+                        break;
+                    }
+                    else if (end==3) {Save(); break;} //사용자가 exit 입력시 자동 저장 후 게임 종료
+
+                    clear(); Print(); //이동 후 변경된 체스판을 정리된 화면에 프린트
 
                 }break;
             }
-            case 2: {
-                Load(2); Print();
+            case 2: { //Load
+                Load(2); Print(); //새 게임 판을 로드하여 프린트
                 while (1) {
-                    Move1();
-                    if(end==1||end==2) {
-                        break;
-                    }
-                    else if (end==3) {Save(); break;}
-                    clear(); Print();
+                    Move1(); //player 1 이동
 
-                    Move2();
-                    if(end==1||end==2) {
+                    if(end==1||end==2) { //만약 king이 잡히거나 checkmate상태가 되면 게임 종료
                         break;
                     }
-                    else if (end==3) {Save(); break;}
-                    clear(); Print();
+                    else if (end==3) {Save(); break;} //사용자가 exit 입력시 자동 저장 후 게임 종료
+
+                    clear(); Print(); //이동 후 변경된 체스판을 정리된 화면에 프린트
+
+                    Move2(); //player 2 이동
+                    if(end==1||end==2) { //만약 king이 잡히거나 checkmate상태가 되면 게임 종료
+                        break;
+                    }
+                    else if (end==3) {Save(); break;} //사용자가 exit 입력시 자동 저장 후 게임 종료
+
+                    clear(); Print(); //이동 후 변경된 체스판을 정리된 화면에 프린트
 
                 }break;
             }
-            case 3: {
+            case 3: { //Help (도움말 출력)
                 Rule();
                 break;
             }
@@ -108,199 +114,202 @@ int main() {
                 break;
         }
 
-        if (a==4||end==3) {
+        if (a==4) { //게임 종료
             printf("Thank you");
-            break;
+            break; //while문 종료
         }
 
     }
     return 0;
 }
 
-void Load(int k) {
-    FILE *fp = NULL;
-    char input[50];
-    int I=0;
-    if (k==1) fp = fopen(PAN, "r+");
-    else {
+void Load(int k) { // 게임을 시작하기 전 필요한 과정 (새 게임 실행 시 k=1, 저장된 게임 실행 시 k=2)
+    FILE *fp = NULL; // 체스판이 저장된 텍스트 파일을 저장할 공간 선언
+    char input[50]; // 파일 속 문자열을 읽어서 배열에 저장하기 위한 중간 문자열
+    int I=0; // for문 사용
+    if (k==1) fp = fopen(PAN, "r"); // 새 게임용 텍스트파일 열기
+    else { //저장된 게임용 텍스트파일 실행
         fp = fopen(SPAN, "r");
-        if (fp==NULL) {
+        if (fp==NULL) { //만약 저장된 게임(체스판)이 없으면 새 게임 실행
             printf("no savefile. new game start\n");
-            fp = fopen(PAN, "r+");
+            fp = fopen(PAN, "r");
         }
     }
-    while (fscanf(fp, "%s", input) != EOF) {
-        strcpy(pan[I],input);
-        I++;
-    } fclose(fp);
+    while (fscanf(fp, "%s", input) != EOF) { //파일이 끝날 때까지 한줄 씩 읽어서 input에 저장
+        strcpy(pan[I],input); // input에 저장된 문자열 체스판 배열 (pan)에 저장
+        I++; //다음 줄을 읽고 저장하기 위함
+    } fclose(fp); //파일 닫기
 
-    pStr = pan;
+    pStr = pan; // 포인터 pStr은 배열 pan의 시작주소를 포인트 함
 
-    strcpy(die1, "DIE-");
-    strcpy(die2, "DIE-");
- }
+    strcpy(die1, "DIE-"); // 죽은 말 표시를 위한 문구 - strlen(die2) = 4
+    strcpy(die2, "DIE-"); // 죽은 말 표시를 위한 문구 - strlen(die2) = 4
+}
 
-void Print(void) {
+void Print(void) { // 체스판 출력
     int pnum=1;
-    //printf("  %s\n", die2);
-    if(strlen(die2) > 4) printf("%s\n", die2);
-    printf("    A   B   C   D   E   F   G   H\n");
-    for (int i=0;i<17;i++) {
-        if (i%2==0) printf("  %s\n", *(pStr+i));
+    if(strlen(die2) > 4) printf("%s\n", die2); //만약 player1이 잡은 말이 있다면 출력 ( 아무말도 안잡았을 때 strlen(die2) = 4)
+    printf("    A   B   C   D   E   F   G   H\n"); // 열 표시
+    for (int i=0;i<17;i++) { // 체스판이 저장된 배열pan을 포인트하는 pStr을 이용하여 한줄 씩 출력
+        if (i%2==0) printf("  %s\n", *(pStr+i)); // 행 표시
         else {printf("%d %s\n",pnum,*(pStr+i)); pnum++;}
     }
-    if(strlen(die1) > 4) printf("%s\n", die1);
+    if(strlen(die1) > 4) printf("%s\n", die1); //만약 player2가 잡은 말이 있다면 출력 ( 아무말도 안잡았을 때 strlen(die1) = 4)
 }
 
-void Backpan(void) {
+void Backpan(void) { // 백그라운드 체스판에 현재 판 복사
     for(int i=0;i<17;i++)
-        strcpy(backpan[i], pan[i]);
+        strcpy(backpan[i], pan[i]); // 한줄 씩 pan을 backpan에 복사한다
 }
 
-void Checkbackpan(void) {
+void Checkbackpan(void) { // 체크여부확인 체스판에 현재 판 복사
     for(int i=0;i<17;i++)
         strcpy(checkbackpan[i], pan[i]);
 }
 
-void Returncheckpan(void) {
+void Returncheckpan(void) { // 현재 판에 체크여부확인 체스판 복사
     for(int i=0;i<17;i++)
         strcpy(*(pStr+i), checkbackpan[i]);
 }
 
-void Rule(void) {
+void Rule(void) { //도움말 출력
     printf("\n<  > :Player 1, [  ] : Player 2\n");
     printf("\nYou can move your pieces to '*'\n");
     printf("\nK can move one square horizontally, vertically, or diagonally.\n"
            "Q can move any number of vacant squares diagonally, horizontally, or vertically.\n"
            "R can move any number of vacant squares vertically or horizontally. It also is moved while castling.\n"
            "B can move any number of vacant squares in any diagonal direction.\n"
-           "N can move one square along any rank or file and then at an angle. The knight��s movement can also be viewed as an ��L�� or ��7�� laid out at any horizontal or vertical angle.\n"
+           "N can move one square along any rank or file and then at an angle. The knight´s movement can also be viewed as an “L” or “7″ laid out at any horizontal or vertical angle.\n"
            "P can move forward one square, if that square is unoccupied. \n(If it has not yet moved, the pawn can move two squares forward provided both squares in front of the pawn are unoccupied.)\n\n");
-    getch();
-    getch();
+    getch(); // 메뉴 출력 후 a입력 받을 때 개행문자 입력받음
+    getch(); //사용자가 Enter 누르면 종료
 }
 
-void Delete_s(void) {
-    char Back;
+void Delete_s(void) { // 이동 후 이동 가능 여부 체크했던 *표시 원래대로 돌려놓음
+    char Back; // 돌려놓을 문자 저장용 변수
 
     for(int i=0;i<17;i++)
         for(int j=0;j<49;j++)
-            if (*(*(pStr+i)+j)=='*') {
+            if (*(*(pStr+i)+j)=='*') { //모든 판을 체크하여 *표시를 backpan에 저장된 원래 문자로 돌려놓음
                 Back = backpan[i][j];
                 *(*(pStr+i)+j) = Back;
             }
-
 }
 
-//player 1 �̵��Լ�
-void Move1(void) {
-    char before[5], after[5];
-    int b1=0, b2=0, a1=0, a2=0;
+void Move1(void) { //player 1 이동함수
+    char before[5], after[3]; //이동시킬 말, 위치 입력받을 변수 (save나 exit 입력받아야하는 경우가 있어서 크기: 5)
+    int b1=0, b2=0, a1=0, a2=0; //이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
     Backpan();
 
-    //�� ���� �ڸ� ���ý� �ٽ�
+    //이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
     while(1) {
 
-        if(Checkmate(1) == 0) { end = 2; break;}
-        for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);}
+        if(Checkmate(1) == 0) { end = 2; break;} //만약 player1이 움직일 수 있는 말이 없는 경우 player2 승리, 게임 종료
+        else { for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);} } //아니면 다시 실행중인 판 복구
 
         printf("< Player 1 >\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
-        if (strcmp(before, "save") == 0) {
+        if (strcmp(before, "save") == 0) { // 사용자가 save입력 시 현재 체스판 텍스트 파일에 저장
             Save();
             printf("S A V E . . . !\n");
             continue;
         }
-        else if(strcmp(before, "exit") == 0) {
+        else if(strcmp(before, "exit") == 0) { // 사용자가 exit입력 시 게임 종료 후 메뉴로 돌아감
             end += 3;
             break;
         }
         else {
-            b1 = 2 * (before[1] - 48) - 1;
-            b2 = 4 * (before[0] - 64) - 2;
-            if (*(*(pStr + b1) + (b2-1)) == '[') { printf("It is not yours\n\n"); continue; }
-            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; }
+            b1 = 2 * (before[1] - 48) - 1; //입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
+            b2 = 4 * (before[0] - 64) - 2; //입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
+            if (*(*(pStr + b1) + (b2-1)) == '[') { printf("It is not yours\n\n"); continue; } // 상대방 말 선택시 다시 선택
+            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; } // 비어있는 위치 선택시 다시 선택
             else {
-                switch (*(*(pStr+b1)+b2)) {  //�̵� ������ �� *ǥ��
-                    case 'P': { Pawn(b1,b2); break;}
-                    case 'R': { Rook(b1,b2); break;}
-                    case 'N': { Knight(b1,b2); break;}
-                    case 'B': { Bishop(b1,b2); break;}
-                    case 'Q': { Queen(b1,b2); break;}
-                    case 'K': { King(b1,b2); break;}
+                // 선택한 말의 종류에 따라 이동 가능한 곳 *으로 표시
+                switch (*(*(pStr+b1)+b2)) {
+                    case 'P': { Pawn(b1,b2); break; }
+                    case 'R': { Rook(b1,b2); break; }
+                    case 'N': { Knight(b1,b2); break; }
+                    case 'B': { Bishop(b1,b2); break; }
+                    case 'Q': { Queen(b1,b2); break; }
+                    case 'K': { King(b1,b2); break; }
                 }
 
-                //�̵� �� check ���°� �Ǵ� ���� .���� ����
+                //이동 후 check 상태가 되는 곳은 .으로 변경
                 for(int i=0;i<8;i++) {
                     for(int j=0;j<8;j++) {
-                        Checkbackpan(); //�������� �ٽ� �̰ɷ� ������!
-                        int checkx=-1, checky=-1; //checkx = j, checky = i
-                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                        Checkbackpan(); //확인이 끝난 후 돌려놓을 판을 위해 저장해놓음 (백업용)
+                        int checkx=-1, checky=-1; // 이동을 금지시킬 행과 열 인덱스 저장용
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
                             *(*(pStr+(2*i+1))+(4*j+1)) = '<';
                             *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+b1)+b2);
                             *(*(pStr+(2*i+1))+(4*j+3)) = '>';
                             *(*(pStr+b1)+(b2-1)) = *(*(pStr+b1)+b2) = *(*(pStr+b1)+(b2+1)) = '.';
                             Delete_s();
-                            if ( Check(1) == 1 ) { checkx = j; checky = i; } //check�� ��� ��ǥ ����
-                            Returncheckpan();
+                            if ( Check(1) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                            Returncheckpan(); //다시 현재 판으로 돌려놓음
                             if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                            // 만약 check인 경우가 있어서 checkx, checky에 인덱스 값이 저장되어있으면 * -> . (이동 못함)
                         }
                     }
                 }
 
-                //������ �� �ִ� ��ΰ� ���� ��� �ٽ�
+                // 선택된 말이 움질일 수 있는 경로가 있는지 확인
                 for(int i=0;i<8;i++) {
                     for(int j=0;j<8;j++) {
                         if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
-                            F += 1;
+                            F += 1; // F >= 1 이면 이동 시킬 수 있다
                     }
                 }
-                if(F == 0) {
+                if(F == 0) { //이동시킬 수 있는 위치가 없으면 위치 다시 입력 받기
                     printf("You can not move that!\n\n");
                     continue;
                 }
 
-                else {
-                    F=0;
+                else { //이동 시킬 수 있는 위치가 있는 경우
+                    F=0; //다음 이용을 위해 초기화
                     clear();
-                    Print();
+                    Print(); // 이동 가능 위치 표시된 체스판 출력
                     break;}
             }
         }
     }
 
-    //�ڱ� �� �ִ� �� ���ý� �ٽ�
+    // 선택된 말 이동시킬 경로 입력받아 이동시키기
     while(1) {
-        if(end == 3||end == 2) break;
+        if(end == 3||end == 2) break; // 앞에서 exit을 입력받았거나 종료 조건이 만족된 경우 종료
         printf("< Player 1 >\nWhere? : ");
         scanf("%s", after);
-        a1 = 2 * (after[1] - 48) - 1;
-        a2 = 4 * (after[0] - 64) - 2;
-        if( *(*(pStr+b1)+b2) =='P' && a1==15) { //Ư����
+        a1 = 2 * (after[1] - 48) - 1; //입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
+        a2 = 4 * (after[0] - 64) - 2; //입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
+
+        if( *(*(pStr+b1)+b2) =='P' && a1==15) { //특수룰 - Pawn이 상대측 체스판 끝에 도달 시 Q, B, N, R 중 하나로 변경
             char Change[2];
             clear();
-            printf("change P to ? (Q or B or N or R) : ");
+            printf("change P to ? (Q or B or N or R or P) : ");
             scanf("%s", Change);
-            *(*(pStr+b1)+b2) = Change[0];
+            if(Change[0] == 'Q' || Change[0] == 'B' || Change[0] == 'N' || Change[0] == 'R' || Change[0] == 'P' )
+                *(*(pStr+b1)+b2) = Change[0]; // 입력받은 문자열로 변경
+            else { printf("You can not change P to %c\n", Change[0]); } // 다른 문자 입력하면 PASS!
         }
-        if(*(*(pStr+a1)+a2) != '*') { printf("again\n"); continue; }
-        if (*(*(pStr + a1) + (a2 - 1)) == '<') { printf("again\n"); continue; }
-        else { Delete_s(); break;}
+
+        if(*(*(pStr+a1)+a2) != '*') { printf("again\n"); continue; } // 선택한 위치가 이동 불가능 한 위치면 다시 입력
+        if (*(*(pStr + a1) + (a2 - 1)) == '<') { printf("again\n"); continue; } // 본인 말이 있는 위치 선택 시 다시 입력
+        else { Delete_s(); break; } // 이동할 위치 정해졌으니 *표시 모두 제거
     }
 
-    if( end!=3 && end!=2 ) {
+    if( end!=3 && end!=2 ) { //게임이 종료되는 경우가 아니면 실행
 
-        //King ������ ��� ��ǥ ���� (for checkȮ��)
+        //이동시킬 말이 King인 경우 변경될 좌표 저장 (for check확인)
         if (*(*(pStr+b1)+b2)=='K') {
             kx1 = a1; ky1 = a2;
         }
 
-        //�� ������ end
+        //왕 잡으면 end
         if (*(*(pStr+a1)+ a2)=='K') end=1;
 
-        //�ڸ� �ű��
-        if (*(*(pStr+a1)+(a2-1)) == '[') {
-            switch (backpan[a1][a2]) {
+        //자리 옮기기
+        if (*(*(pStr+a1)+(a2-1)) == '[') { //상대말 말을 잡은 경우 체스판 프린트시 표시
+            switch (backpan[a1][a2]) { // "DIE-" 뒤에 이어서 저장 (strcat() 이용)
                 case 'P': { strcat(die2, "[P]"); break; }
                 case 'R': { strcat(die2, "[R]"); break; }
                 case 'B': { strcat(die2, "[B]"); break; }
@@ -308,6 +317,7 @@ void Move1(void) {
                 case 'Q': { strcat(die2, "[Q]"); break; }
             }
         }
+        //위치 변경 후 기존 자리는 ...으로 표시
         *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
         *(*(pStr+a1)+ ++a2) = '>'; a2--;
         *(*(pStr+a1)+ --a2) = '<';
@@ -317,116 +327,121 @@ void Move1(void) {
     }
 }
 
-//player 2 �̵��Լ�
-void Move2(void) { // 2 �̵�
-    char before[3], after[3];
-    int a1=0, a2=0, b1=0, b2=0;
+void Move2(void) { //player 2 이동함수
+    char before[5], after[3];  //이동시킬 말, 위치 입력받을 변수 (save나 exit 입력받아야하는 경우가 있어서 크기: 5)
+    int a1=0, a2=0, b1=0, b2=0; //이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
     Backpan();
 
-    // �� ���� ��� ���ý� �ٽ�
+    //이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
     while(1) {
 
-        if(Checkmate(2) == 0) { end = 1; break;}
-        for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);}
+        if(Checkmate(2) == 0) { end = 1; break;} //만약 player2가 움직일 수 있는 말이 없는 경우 player1 승리, 게임 종료
+        for(int k=0;k<17;k++) {strcpy(pan[k], backpan[k]);} //아니면 다시 실행중인 판 복구
 
         printf("[ Player 2 ]\n(save: save game board, exit: end game)\nWhat? : ");
         scanf("%s", before);
-        if (strcmp(before, "save") == 0) {
+        if (strcmp(before, "save") == 0) { // 사용자가 save입력 시 현재 체스판 텍스트 파일에 저장
             Save();
             printf("S A V E . . . !\n");
             continue;
         }
-        else if(strcmp(before, "exit") == 0) {
+        else if(strcmp(before, "exit") == 0) { // 사용자가 exit입력 시 게임 종료 후 메뉴로 돌아감
             end += 3;
             break;
         }
         else {
-            b1 = 2 * (before[1] - 48) - 1;
-            b2 = 4 * (before[0] - 64) - 2;
-            if (*(*(pStr + b1) + (b2-1)) == '<') { printf("It is not yours\n\n"); continue; }
-            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; }
+            b1 = 2 * (before[1] - 48) - 1; //입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
+            b2 = 4 * (before[0] - 64) - 2; //입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
+            if (*(*(pStr + b1) + (b2-1)) == '<') { printf("It is not yours\n\n"); continue; } // 상대방 말 선택시 다시 선택
+            if (*(*(pStr + b1) + b2) == '.') { printf("There are nothing\n\n"); continue; } // 비어있는 위치 선택시 다시 선택
             else {
+                // 선택한 말의 종류에 따라 이동 가능한 곳 *으로 표시
                 switch (*(*(pStr+b1)+b2)) {
-                    case 'P': { Pawn(b1,b2); break;}
-                    case 'R': { Rook(b1,b2); break;}
-                    case 'N': { Knight(b1,b2); break;}
-                    case 'B': { Bishop(b1,b2); break;}
-                    case 'Q': { Queen(b1,b2); break;}
-                    case 'K': { King(b1,b2); break;}
+                    case 'P': { Pawn(b1,b2); break; }
+                    case 'R': { Rook(b1,b2); break; }
+                    case 'N': { Knight(b1,b2); break; }
+                    case 'B': { Bishop(b1,b2); break; }
+                    case 'Q': { Queen(b1,b2); break; }
+                    case 'K': { King(b1,b2); break; }
                 }
 
-                //�̵� �� check ���°� �Ǵ� ���� .���� ����
+                //이동 후 check 상태가 되는 곳은 .으로 변경
                 for(int i=0;i<8;i++) {
                     for(int j=0;j<8;j++) {
-                        Checkbackpan(); //�������� �ٽ� �̰ɷ� ������!
-                        int checkx=-1, checky=-1; //checkx = j, checky = i
-                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                        Checkbackpan(); // 확인이 끝난 후 돌려놓을 판을 위해 저장해놓음 (백업용)
+                        int checkx=-1, checky=-1; // 이동을 금지시킬 행과 열 인덱스 저장용
+                        if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
                             *(*(pStr+(2*i+1))+(4*j+1)) = '[';
                             *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+b1)+b2);
                             *(*(pStr+(2*i+1))+(4*j+3)) = ']';
                             *(*(pStr+b1)+(b2-1)) = *(*(pStr+b1)+b2) = *(*(pStr+b1)+(b2+1)) = '.';
                             Delete_s();
-                            if ( Check(2) == 1 ) { checkx = j; checky = i; } //check�� ��� ��ǥ ����
-                            Returncheckpan();
+                            if ( Check(2) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                            Returncheckpan(); //다시 현재 판으로 돌려놓음
                             if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                            // 만약 check인 경우가 있어서 checkx, checky에 인덱스 값이 저장되어있으면 * -> . (이동 금지 시키기)
                         }
                     }
                 }
 
-                //������ �� �ִ� ��ΰ� ���� ���
+                // 선택된 말이 움질일 수 있는 경로가 있는지 확인
                 for(int i=0;i<8;i++) {
                     for(int j=0;j<8;j++) {
                         if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
-                            F += 1;
+                            F += 1; // F >= 1 이면 이동 시킬 수 있다
                     }
                 }
-                if(F == 0) {
+                if(F == 0) { //이동시킬 수 있는 위치가 없으면 위치 다시 입력 받기
                     printf("You can not move that!\n");
                     continue;
                 }
 
-                else {
-                    F=0;
+                else { //이동 시킬 수 있는 위치가 있는 경우
+                    F=0; //다음 이용을 위해 초기화
                     clear();
-                    Print();
+                    Print(); // 이동 가능 위치 표시된 체스판 출력
                     break;}
             }
         }
     }
 
-    //���� �� �ִ� �� ���ý� �ٽ�
+    // 선택된 말 이동시킬 경로 입력받아 이동시키기
     while(1) {
-        if (end==3||end==1) break;
+        if (end==3||end==1) break; // 앞에서 exit을 입력받았거나 종료 조건이 만족된 경우 종료
         printf("[ Player 2 ]\nWhere? : ");
         scanf("%s", after);
-        a1=2*(after[1]-48)-1;
-        a2=4*(after[0]-64)-2;
-        if( *(*(pStr+b1)+b2) == 'P' && a1==1) { //Ư����
+        a1 = 2 * (after[1] - 48) - 1; //입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
+        a2 = 4 * (after[0] - 64) - 2; //입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
+
+        if( *(*(pStr+b1)+b2) == 'P' && a1==1) { //특수룰 - Pawn이 상대측 체스판 끝에 도달 시 Q, B, N, R 중 하나로 변경
             char Change[2];
             clear();
             printf("change P to ? (Q or B or N or R) : ");
             scanf("%s", Change);
-            *(*(pStr+b1)+b2) = Change[0];
+            if(Change[0] == 'Q' || Change[0] == 'B' || Change[0] == 'N' || Change[0] == 'R' || Change[0] == 'P' )
+                *(*(pStr+b1)+b2) = Change[0]; // 입력받은 문자열로 변경
+            else { printf("You can not change P to %c\n", Change[0]); } // 다른 문자 입력하면 PASS!
         }
-        if(*(*(pStr+a1)+a2) != '*') { printf("again\n"); continue; }
-        if(*(*(pStr+a1)+(a2-1)) == '[') {printf("again\n"); continue;}
-        else {Delete_s(); break;}
+
+        if(*(*(pStr+a1)+a2) != '*') { printf("again\n"); continue; } // 선택한 위치가 이동 불가능 한 위치면 다시 입력
+        if (*(*(pStr + a1) + (a2 - 1)) == '[') { printf("again\n"); continue; } // 본인 말이 있는 위치 선택 시 다시 입력
+        else { Delete_s(); break; } // 이동할 위치 정해졌으니 *표시 모두 제거
     }
 
-    if (end != 3 && end != 1) {
+    if (end != 3 && end != 1) { //게임이 종료되는 경우가 아니면 실행
 
-        //King ������ ��� ��ǥ ���� (for checkȮ��)
+        //이동시킬 말이 King인 경우 변경될 좌표 저장 (for check확인)
         if (*(*(pStr+b1)+b2)=='K') {
             kx2 = a1; ky2 = a2;
         }
 
-        // �� ������ end
+        // 왕 잡으면 end
         if (*(*(pStr+a1)+ a2)=='K') end=2;
 
 
-        //�ڸ� �ű��
-        if (*(*(pStr+a1)+(a2-1)) == '<') {
-            switch (backpan[a1][a2]) {
+        //자리 옮기기
+        if (*(*(pStr+a1)+(a2-1)) == '<') { //상대말 말을 잡은 경우 체스판 프린트 시 표시
+            switch (backpan[a1][a2]) { // "DIE-" 뒤에 이어서 저장 (strcat() 이용)
                 case 'P': { strcat(die1, "<P>"); break; }
                 case 'R': { strcat(die1, "<R>"); break; }
                 case 'B': { strcat(die1, "<B>"); break; }
@@ -435,6 +450,7 @@ void Move2(void) { // 2 �̵�
             }
         }
 
+        //위치 변경 후 기존 자리는 ...으로 표시
         *(*(pStr+a1)+ a2) = *(*(pStr+b1)+b2);
         *(*(pStr+a1)+ ++a2) = ']'; a2--;
         *(*(pStr+a1)+ --a2) = '[';
@@ -444,578 +460,603 @@ void Move2(void) { // 2 �̵�
     }
 }
 
-void Pawn(int b1, int b2) {
+void Pawn(int b1, int b2) { // Pawn 선택 시 이동 가능 위치 *로 표시
 
-    if(*(*(pStr+b1)+(b2-1))=='<'){
-        if(*(*(pStr+(b1+2))+b2) == '.' ) {
+    if(*(*(pStr+b1)+(b2-1))=='<') { //player1의 경우
+        if(*(*(pStr+(b1+2))+b2) == '.' ) { // Pawn은 앞 칸이 이어있는 경우 앞으로 한 칸 전진(행 인덱스 2 증가) 가능 하다
             *(*(pStr+(b1+2))+b2) = '*';
-            if( b1==3 ) {*(*(pStr+(b1+4))+b2) = '*';}
+            if( b1==3 ) {*(*(pStr+(b1+4))+b2) = '*';} // 처음 이동 시키는 경우 두 칸 전진도 가능하다
         }
         if( *(*(pStr+(b1+2))+(b2-4))!='.' && *(*(pStr+(b1+2))+(b2-5))=='[' ) {
+            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             *(*(pStr+(b1+2))+(b2-4)) = '*';
         }
         if( *(*(pStr+(b1+2))+(b2+4)) != '.' && *(*(pStr+(b1+2))+(b2+5))==']' ) {
+            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
 
             *(*(pStr+(b1+2))+(b2+4)) = '*'; }
     }
-    else {
-        if(*(*(pStr+(b1-2))+b2) == '.')
-        {*(*(pStr+(b1-2))+b2) = '*';
-            if( b1==13 ) {*(*(pStr+(b1-4))+b2) = '*';}}
+    else { //player2의 경우
+        if(*(*(pStr+(b1-2))+b2) == '.') { // Pawn은 앞 칸이 이어있는 경우 앞으로 한 칸 전진(행 인덱스 2 감소) 가능 하다
+            *(*(pStr+(b1-2))+b2) = '*';
+            if( b1==13 ) {*(*(pStr+(b1-4))+b2) = '*';} // 처음 이동 시키는 경우 두 칸 전진도 가능하다
+        }
         if( *(*(pStr+(b1-2))+(b2-4))!='.' && *(*(pStr+(b1-2))+(b2-5))=='<') {
+            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             *(*(pStr+(b1-2))+(b2-4)) = '*';
         }
         if( *(*(pStr+(b1-2))+(b2+4)) != '.' && *(*(pStr+(b1-2))+(b2+3))=='<') {
+            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             *(*(pStr+(b1-2))+(b2+4)) = '*';
         }
     }
 }
 
-void Rook(int b1, int b2) {
-    int B1 = b1, B2 = b2;
-    if (*(*(pStr + B1) + (B2 - 1)) == '<') { // Player 1
-        while (1) {
+void Rook(int b1, int b2) { // Rook 선택 시 이동 가능 위치 *로 표시
+    int B1 = b1, B2 = b2; // 변동이 있을 때 초기화를 위함
+
+    if (*(*(pStr + B1) + (B2 - 1)) == '<') { // Player 1의 경우
+        while (1) { // 앞으로 이동 가능
             B1 += 2;
-            if(B1 > 16) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1 > 16) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1 = b1;
-        while (1) {
+        B1 = b1; // 다시 원래 자리로
+        while (1) { // 뒤로 이동 가능
             B1 -= 2;
-            if (B1 < 0) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B1 < 0) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1 = b1;
-        while (1) {
+        B1 = b1; // 다시 원래 자리로
+        while (1) { // 오른쪽으로 이동 가능
             B2 += 4;
-            if (B2 > 33) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 > 33) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B2 = b2;
-        while (1) {
+        B2 = b2; // 다시 원래 자리로
+        while (1) { // 왼쪽으로 이동 가능
             B2 -= 4;
-            if (B2<0) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
-            else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') { //���� �պ�����!!!!!!!!!! ?
+            if (B2<0) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
+            else if (*(*(pStr + B1) + (B2 - 1)) == '[' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
     }
-    else { // Player 2
-        while (1) {
+
+    else { // Player 2의 경우
+        while (1) { //뒤로 이동 가능
             B1 += 2;
-            if(B1 > 16) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1 > 16) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1 = b1;
-        while (1) {
+        B1 = b1; // 다시 원래 자리로
+        while (1) { //앞으로 이동 가능
             B1 -= 2;
-            if(B1<0) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if(B1<0) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1 = b1;
-        while (1) {
+        B1 = b1; // 다시 원래 자리로
+        while (1) { //오른쪽으로 이동 가능
             B2 += 4;
-            if (B2 > 33) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 > 33) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B2 = b2;
-        while (1) {
+        B2 = b2; // 다시 원래 자리로
+        while (1) { //왼쪽으로 이동 가능
             B2 -= 4;
-            if (B2 < 0) break;
-            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*';
+            if (B2 < 0) break; //체스판 끝까지 확인
+            else if (*(*(pStr + B1) + B2) == '.') *(*(pStr + B1) + B2) = '*'; //비어있는 칸이면 계속 이동 가능
             else if (*(*(pStr + B1) + (B2 - 1)) == '<' || *(*(pStr + B1) + B2) == '.') {
+                //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr + B1) + B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
     }
 }
 
-void Bishop(int b1, int b2) {
-    int B1 = b1, B2 = b2;
+void Bishop(int b1, int b2) { // Bishop 선택 시 이동 가능 위치 *로 표시
+    int B1 = b1, B2 = b2; // 변동이 있을 때 초기화를 위함
 
-    if(*(*(pStr+b1)+(b2-1))=='<') {
-        while (1) {
+    if(*(*(pStr+b1)+(b2-1))=='<') { //player1의 경우
+        while (1) { // ↘
+            B1 += 2;
+            B2 += 4;
+            if (B1 > 16 || B2 > 33) break; //체스판 끝까지 확인
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                continue;
+            }
+            else if(*(*(pStr+B1)+(B2-1)) == '[') { //상대방 말이 있으면 그 칸까지 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                break;
+            }
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
+        }
+        B1=b1; B2=b2; // 다시 원래 자리로
+
+        while (1) { // ↙
+            B1 += 2;
+            B2 -= 4;
+            if (B1 > 16 || B2 < 0) break; //체스판 끝까지 확인
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                continue;
+            }
+            else if(*(*(pStr+B1)+(B2-1)) == '[') { //상대방 말이 있으면 그 칸까지 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                break;
+            }
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
+        }
+        B1=b1; B2=b2; // 다시 원래 자리로
+
+        while (1) { // ↗
+            B1 -= 2;
+            B2 += 4;
+            if (B1 < 0 || B2 > 33) break; //체스판 끝까지 확인
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                continue;
+            }
+            else if(*(*(pStr+B1)+(B2-1)) == '[') { //상대방 말이 있으면 그 칸까지 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                break;
+            }
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
+        }
+        B1=b1; B2=b2; // 다시 원래 자리로
+
+        while (1) { // ↖
+            B1 -= 2;
+            B2 -= 4;
+            if (B1 < 0 || B2 < 0) break; //체스판 끝까지 확인
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                continue;
+            }
+            else if(*(*(pStr+B1)+(B2-1)) == '[') { //상대방 말이 있으면 그 칸까지 이동 가능
+                *(*(pStr+B1)+B2) = '*';
+                break;
+            }
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
+        }
+    }
+
+    else { //player2의 경우
+        while (1) { // ↘
             B1 += 2;
             B2 += 4;
             if (B1 > 16 || B2 > 33) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
-            else if(*(*(pStr+B1)+(B2-1)) == '[') {
+            else if(*(*(pStr+B1)+(B2-1)) == '<') { //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1=b1; B2=b2;
+        B1=b1; B2=b2; // 다시 원래 자리로
 
-        while (1) {
+        while (1) { // ↙
             B1 += 2;
             B2 -= 4;
             if (B1 > 16 || B2 < 0) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
-            else if(*(*(pStr+B1)+(B2-1)) == '[') {
+            else if(*(*(pStr+B1)+(B2-1)) == '<') { //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1=b1; B2=b2;
+        B1=b1; B2=b2; // 다시 원래 자리로
 
-        while (1) {
+        while (1) { // ↗
             B1 -= 2;
             B2 += 4;
             if (B1 < 0 || B2 > 33) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
-            else if(*(*(pStr+B1)+(B2-1)) == '[') {
+            else if(*(*(pStr+B1)+(B2-1)) == '<') { //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 break;
             }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
-        B1=b1; B2=b2;
+        B1=b1; B2=b2; // 다시 원래 자리로
 
-        while (1) {
+        while (1) { // ↖
             B1 -= 2;
             B2 -= 4;
             if (B1 < 0 || B2 < 0) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
+            else if(*(*(pStr+B1)+B2) == '.') { //비어있는 칸이면 계속 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 continue;
             }
-            else if(*(*(pStr+B1)+(B2-1)) == '[') {
+            else if(*(*(pStr+B1)+(B2-1)) == '<') { //상대방 말이 있으면 그 칸까지 이동 가능
                 *(*(pStr+B1)+B2) = '*';
                 break;
             }
-            else break;
-        }
-    }
-
-    else {
-        while (1) {
-            B1 += 2;
-            B2 += 4;
-            if (B1 > 16 || B2 > 33) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
-                *(*(pStr+B1)+B2) = '*';
-                continue;
-            }
-            else if(*(*(pStr+B1)+(B2-1)) == '<') {
-                *(*(pStr+B1)+B2) = '*';
-                break;
-            }
-            else break;
-        }
-        B1=b1; B2=b2;
-
-        while (1) {
-            B1 += 2;
-            B2 -= 4;
-            if (B1 > 16 || B2 < 0) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
-                *(*(pStr+B1)+B2) = '*';
-                continue;
-            }
-            else if(*(*(pStr+B1)+(B2-1)) == '<') {
-                *(*(pStr+B1)+B2) = '*';
-                break;
-            }
-            else break;
-        }
-        B1=b1; B2=b2;
-
-        while (1) {
-            B1 -= 2;
-            B2 += 4;
-            if (B1 < 0 || B2 > 33) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
-                *(*(pStr+B1)+B2) = '*';
-                continue;
-            }
-            else if(*(*(pStr+B1)+(B2-1)) == '<') {
-                *(*(pStr+B1)+B2) = '*';
-                break;
-            }
-            else break;
-        }
-        B1=b1; B2=b2;
-
-        while (1) {
-            B1 -= 2;
-            B2 -= 4;
-            if (B1 < 0 || B2 < 0) break;
-            else if(*(*(pStr+B1)+B2) == '.') {
-                *(*(pStr+B1)+B2) = '*';
-                continue;
-            }
-            else if(*(*(pStr+B1)+(B2-1)) == '<') {
-                *(*(pStr+B1)+B2) = '*';
-                break;
-            }
-            else break;
+            else break; //본인 말이 있으면 그 칸부터 이동 불가능
         }
     }
 }
 
-void Knight(int b1, int b2) {
+void Knight(int b1, int b2) { // Knight 선택 시 이동 가능 위치 *로 표시
+    //비어있는 칸이거나 상대방 말이 있는 경우 이동 가능
 
-    if(*(*(pStr+b1)+(b2-1)) == '<') {
-
-        if( *(*(pStr+(b1+4))+(b2+3)) == '[' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+4))+(b2-5)) == '[' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+7)) == '[' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-9)) == '[' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
-        if( *(*(pStr+(b1-4))+(b2+3)) == '[' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-4))+(b2-5)) == '[' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+7)) == '[' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-9)) == '[' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
+    if(*(*(pStr+b1)+(b2-1)) == '<') { //player1의 경우 (상대방의 말이 있거나 비어있으면 이동가능)
+        if( *(*(pStr+(b1+4))+(b2+3)) == '[' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*'; // ↓ ↓ -→
+        if( *(*(pStr+(b1+4))+(b2-5)) == '[' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*'; // ←- ↓ ↓
+        if( *(*(pStr+(b1+2))+(b2+7)) == '[' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*'; // ↓ -→ -→
+        if( *(*(pStr+(b1+2))+(b2-9)) == '[' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*'; // ←- ←- ↓
+        if( *(*(pStr+(b1-4))+(b2+3)) == '[' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*'; // ↑ ↑ -→
+        if( *(*(pStr+(b1-4))+(b2-5)) == '[' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*'; // ←- ↑ ↑
+        if( *(*(pStr+(b1-2))+(b2+7)) == '[' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*'; // ↑ -→ -→
+        if( *(*(pStr+(b1-2))+(b2-9)) == '[' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*'; // ←- ←- ↑
     }
-    else {
-        if( *(*(pStr+(b1+4))+(b2+3)) == '<' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+4))+(b2-5)) == '<' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+7)) == '<' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-9)) == '<' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*';
-        if( *(*(pStr+(b1-4))+(b2+3)) == '<' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-4))+(b2-5)) == '<' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+7)) == '<' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-9)) == '<' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*';
+    else { //player2의 경우 (상대방의 말이 있거나 비어있으면 이동가능)
+        if( *(*(pStr+(b1+4))+(b2+3)) == '<' || *(*(pStr+(b1+4))+(b2+3)) == '.' ) *(*(pStr+(b1+4))+(b2+4)) = '*'; // ↓ ↓ -→
+        if( *(*(pStr+(b1+4))+(b2-5)) == '<' || *(*(pStr+(b1+4))+(b2-5)) == '.' ) *(*(pStr+(b1+4))+(b2-4)) = '*'; // ←- ↓ ↓
+        if( *(*(pStr+(b1+2))+(b2+7)) == '<' || *(*(pStr+(b1+2))+(b2+7)) == '.' ) *(*(pStr+(b1+2))+(b2+8)) = '*'; // ↓ -→ -→
+        if( *(*(pStr+(b1+2))+(b2-9)) == '<' || *(*(pStr+(b1+2))+(b2-9)) == '.' ) *(*(pStr+(b1+2))+(b2-8)) = '*'; // ←- ←- ↓
+        if( *(*(pStr+(b1-4))+(b2+3)) == '<' || *(*(pStr+(b1-4))+(b2+3)) == '.' ) *(*(pStr+(b1-4))+(b2+4)) = '*'; // ↑ ↑ -→
+        if( *(*(pStr+(b1-4))+(b2-5)) == '<' || *(*(pStr+(b1-4))+(b2-5)) == '.' ) *(*(pStr+(b1-4))+(b2-4)) = '*'; // ←- ↑ ↑
+        if( *(*(pStr+(b1-2))+(b2+7)) == '<' || *(*(pStr+(b1-2))+(b2+7)) == '.' ) *(*(pStr+(b1-2))+(b2+8)) = '*'; // ↑ -→ -→
+        if( *(*(pStr+(b1-2))+(b2-9)) == '<' || *(*(pStr+(b1-2))+(b2-9)) == '.' ) *(*(pStr+(b1-2))+(b2-8)) = '*'; // ←- ←- ↑
     }
 
 }
 
-void Queen(int b1, int b2) {
-    Rook(b1,b2);
-    Bishop(b1,b2);
+void Queen(int b1, int b2) { // Queen 선택 시 이동 가능 위치 *로 표시
+    Rook(b1,b2); // 사방으로 이동 가능 = Rook
+    Bishop(b1,b2); // 대각선으로 이동 가능 = Bishop
 }
 
-void King(int b1, int b2) {
-    if(*(*(pStr+b1)+(b2-1)) == '<') {
-        if( *(*(pStr+(b1+2))+(b2-1)) != '<' ) *(*(pStr+(b1+2))+b2) = '*';
-        if( *(*(pStr+(b1-2))+(b2-1)) != '<' ) *(*(pStr+(b1-2))+b2) = '*';
-        if( *(*(pStr+b1)+(b2+3)) != '<' ) *(*(pStr+b1)+(b2+4)) = '*';
-        if( *(*(pStr+b1)+(b2-5)) != '<' ) *(*(pStr+b1)+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+3)) != '<' ) *(*(pStr+(b1+2))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-5)) != '<' ) *(*(pStr+(b1+2))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+3)) != '<' ) *(*(pStr+(b1-2))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-5)) != '<' ) *(*(pStr+(b1-2))+(b2-4)) = '*';
+void King(int b1, int b2) { // King 선택 시 이동 가능 위치 *로 표시
+    if(*(*(pStr+b1)+(b2-1)) == '<') { //player1의 경우
+        if( *(*(pStr+(b1+2))+(b2-1)) != '<' ) *(*(pStr+(b1+2))+b2) = '*'; // ↓
+        if( *(*(pStr+(b1-2))+(b2-1)) != '<' ) *(*(pStr+(b1-2))+b2) = '*'; // ↑
+        if( *(*(pStr+b1)+(b2+3)) != '<' ) *(*(pStr+b1)+(b2+4)) = '*'; // -→
+        if( *(*(pStr+b1)+(b2-5)) != '<' ) *(*(pStr+b1)+(b2-4)) = '*'; // ←-
+        if( *(*(pStr+(b1+2))+(b2+3)) != '<' ) *(*(pStr+(b1+2))+(b2+4)) = '*'; // ↓ -→
+        if( *(*(pStr+(b1+2))+(b2-5)) != '<' ) *(*(pStr+(b1+2))+(b2-4)) = '*'; // ←- ↓
+        if( *(*(pStr+(b1-2))+(b2+3)) != '<' ) *(*(pStr+(b1-2))+(b2+4)) = '*'; // ↑ -→
+        if( *(*(pStr+(b1-2))+(b2-5)) != '<' ) *(*(pStr+(b1-2))+(b2-4)) = '*'; // ←- ↑
     }
-    else {
-        if( *(*(pStr+(b1+2))+(b2-1)) != '[' ) *(*(pStr+(b1+2))+b2) = '*';
-        if( *(*(pStr+(b1-2))+(b2-1)) != '[' ) *(*(pStr+(b1-2))+b2) = '*';
-        if( *(*(pStr+b1)+(b2+3)) != '[' ) *(*(pStr+b1)+(b2+4)) = '*';
-        if( *(*(pStr+b1)+(b2-5)) != '[' ) *(*(pStr+b1)+(b2-4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2+3)) != '[' ) *(*(pStr+(b1+2))+(b2+4)) = '*';
-        if( *(*(pStr+(b1+2))+(b2-5)) != '[' ) *(*(pStr+(b1+2))+(b2-4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2+3)) != '[' ) *(*(pStr+(b1-2))+(b2+4)) = '*';
-        if( *(*(pStr+(b1-2))+(b2-5)) != '[' ) *(*(pStr+(b1-2))+(b2-4)) = '*';
+    else { //player2의 경우
+        if( *(*(pStr+(b1+2))+(b2-1)) != '[' ) *(*(pStr+(b1+2))+b2) = '*'; // ↓
+        if( *(*(pStr+(b1-2))+(b2-1)) != '[' ) *(*(pStr+(b1-2))+b2) = '*'; // ↑
+        if( *(*(pStr+b1)+(b2+3)) != '[' ) *(*(pStr+b1)+(b2+4)) = '*'; // -→
+        if( *(*(pStr+b1)+(b2-5)) != '[' ) *(*(pStr+b1)+(b2-4)) = '*'; // ←-
+        if( *(*(pStr+(b1+2))+(b2+3)) != '[' ) *(*(pStr+(b1+2))+(b2+4)) = '*'; // ↓ -→
+        if( *(*(pStr+(b1+2))+(b2-5)) != '[' ) *(*(pStr+(b1+2))+(b2-4)) = '*'; // ←- ↓
+        if( *(*(pStr+(b1-2))+(b2+3)) != '[' ) *(*(pStr+(b1-2))+(b2+4)) = '*'; // ↑ -→
+        if( *(*(pStr+(b1-2))+(b2-5)) != '[' ) *(*(pStr+(b1-2))+(b2-4)) = '*'; // ←- ↑
     }
 }
 
-void Save(void) {
-    FILE *fp = NULL;
-    fp = fopen(SPAN, "w+");
+void Save(void) { //현재 실행중인 체스판 저장
+    FILE *fp = NULL; // 저장용 텍스트 파일 저장할 공간
+    fp = fopen(SPAN, "w+"); //chess_save.txt파일 열기 (없으면 만들어서 열기)
 
-    for(int i=0;i<17;i++) {
+    for(int i=0;i<17;i++) { // 한줄씩 파일에 입력하기
         fprintf(fp, "%s \n", *(pStr+i));
     }
-    fclose(fp);
+    fclose(fp); // 파일 닫기
 }
 
-int Check(int player) { // king�� ��ǥ�� check ���� Ȯ��
-    int c=0;
-    if(player==1) {
-        int x=kx1, y=ky1;
+int Check(int player) { // 모든 말이 움직일 수 있는 경우의 수를 계산하고 그 중 check상태가 될 수 있는 경우가 있는지 확인하기
+    int c=0; // check가 될 수 있는 경우의 수
 
-        //������
-        for(int i=x;i<34;i+=4) {
-            if ( *(*(pStr+i)+(x-1)) == '<') break;
-            else if( *(*(pStr+y)+(i-1))  == '[') {
+    if(player==1) { //player1의 경우
+        int x=kx1, y=ky1; //현재 king의 좌표 저장
+
+        //오른쪽
+        for(int i=x;i<34;i+=4) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+y)+(i-1))  == '[') { // 상대방 R이나 Q가 있으면 check
                 if( *(*(pStr+y)+i) == 'R' || *(*(pStr+y)+i) == 'Q' ) {
                     c++; break;
                 }
             }
         }
 
-        //����
-        for(int i=x;i>=0;i-=4) {
-            if ( *(*(pStr+i)+(x-1)) == '<') break;
-            else if( *(*(pStr+y)+(i-1))  == '[') {
+        //왼쪽
+        for(int i=x;i>=0;i-=4) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+y)+(i-1))  == '[') { // 상대방 R이나 Q가 있으면 check
                 if( *(*(pStr+y)+i) == 'R' || *(*(pStr+y)+i) == 'Q' ) {
                     c++; break;
                 }
             }
         }
 
-        //��
-        for(int i=y;i<17;i+=2) {
-            if ( *(*(pStr+i)+(x-1)) == '<') break;
-            else if( *(*(pStr+i)+(x-1))  == '[') {
+        //위
+        for(int i=y;i<17;i+=2) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+i)+(x-1))  == '[') { // 상대방 R이나 Q가 있으면 check
                 if( *(*(pStr+i)+x) == 'R' || *(*(pStr+i)+x) == 'Q' ) {
                     c++; break;
                 }
             }
         }
 
-        //�Ʒ�
-        for(int i=y;i>=0;i-=2) {
-            if ( *(*(pStr+i)+(x-1)) == '<') break;
-            else if( *(*(pStr+i)+(x-1))  == '[') {
+        //아래
+        for(int i=y;i>=0;i-=2) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+i)+(x-1))  == '[') { // 상대방 R이나 Q가 있으면 check
                 if( *(*(pStr+i)+x) == 'R' || *(*(pStr+i)+x) == 'Q' ) {
                     c++; break;
                 }
             }
         }
 
-        //�밢��1
-        int pp=0; //pawn Ȯ�ο�
+        //대각선1
+        int pp=0; //pawn 확인용 (대각선 기준 몇 칸 차이인지)
         while(1) {
             x += 4; y += 2; pp++;
-            if( *(*(pStr+y)+(x-1)) == '<') break;
+            if( *(*(pStr+y)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
             else if( *(*(pStr+y)+(x-1)) == '[') {
-                if ( *(*(pStr+y)+x) == 'P' && pp == 1) {
+                if ( *(*(pStr+y)+x) == 'P' && pp == 1) { // 한 칸 대각선에 상대방 P가 있으면 check
                     printf("%d : %c\n", pp, *(*(pStr+y)+x));
                     c++; break;
                 }
-                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) { // 상대방 B나 Q가 있으면 check
                     c++; break;
                 }
             }
-            if(x>33||y>16) {break;}
+            if(x>33||y>16) {break;} // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��2
-        pp=0; //pawn Ȯ�ο�
+        //대각선2
+        pp=0; //pawn 확인용 (대각선 기준 몇 칸 차이인지)
         while(1) {
             x -= 4; y += 2; pp++;
-            if( *(*(pStr+y)+(x-1)) == '<') break;
+            if( *(*(pStr+y)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
             else if( *(*(pStr+y)+(x-1)) == '[') {
-                if ( *(*(pStr+y)+x) == 'P' && pp == 1) {
+                if ( *(*(pStr+y)+x) == 'P' && pp == 1) { // 한 칸 대각선에 상대방 P가 있으면 check
                     c++; break;
                 }
-                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
+                else if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) { // 상대방 B나 Q가 있으면 check
                     c++; break;
                 }
             }
-            if(x<0||y>16) break;
+            if(x<0||y>16) break; // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��3
+        //대각선3
         while(1) {
             x -= 4; y -= 2;
-            if( *(*(pStr+y)+(x-1)) == '<') break;
-            else if( *(*(pStr+y)+(x-1)) == '[') {
+            if( *(*(pStr+y)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+y)+(x-1)) == '[') { // 상대방 B나 Q가 있으면 check
                 if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
                     c++; break;
                 }
             }
-            if(x<0||y<0) break;
+            if(x<0||y<0) break; // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��4
+        //대각선4
         while(1) {
             x += 4; y -= 2;
-            if( *(*(pStr+y)+(x-1)) == '<') break;
-            else if( *(*(pStr+y)+(x-1)) == '[') {
+            if( *(*(pStr+y)+(x-1)) == '<') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if( *(*(pStr+y)+(x-1)) == '[') { // 상대방 B나 Q가 있으면 check
                 if( *(*(pStr+y)+(x-1)) == 'Q' || *(*(pStr+y)+(x-1)) == 'B' ) {
                     c++; break;
                 }
             }
-            if(x>33||y<0) break;
+            if(x>33||y<0) break; // 체스판 끝까지 확인
         }
 
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
+
         //knight
-        if( *(*(pStr+(y+4))+(x+3)) == '[' && *(*(pStr+(y+4))+(x+4)) == 'N' ) c++;
-        if( *(*(pStr+(y+4))+(x-5)) == '[' && *(*(pStr+(y+4))+(x-4)) == 'N' ) c++;
-        if( *(*(pStr+(y-2))+(x-9)) == '[' && *(*(pStr+(y-2))+(x-8)) == 'N' ) c++;
-        if( *(*(pStr+(y+2))+(x+7)) == '[' && *(*(pStr+(y+2))+(x+8)) == 'N' ) c++;
-        if( *(*(pStr+(y+2))+(x-9)) == '[' && *(*(pStr+(y+2))+(x-8)) == 'N' ) c++;
-        if( *(*(pStr+(y-4))+(x+3)) == '[' && *(*(pStr+(y-4))+(x+4)) == 'N' ) c++;
-        if( *(*(pStr+(y-4))+(x-5)) == '[' && *(*(pStr+(y-4))+(x-4)) == 'N' ) c++;
-        if( *(*(pStr+(y-2))+(x+7)) == '[' && *(*(pStr+(y-2))+(x+8)) == 'N' ) c++;
+        if( *(*(pStr+(y+4))+(x+3)) == '[' && *(*(pStr+(y+4))+(x+4)) == 'N' )
+            c++; // ↓ ↓ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+4))+(x-5)) == '[' && *(*(pStr+(y+4))+(x-4)) == 'N' )
+            c++; // ←- ↓ ↓ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-2))+(x-9)) == '[' && *(*(pStr+(y-2))+(x-8)) == 'N' )
+            c++; // ←- ←- ↑ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+2))+(x+7)) == '[' && *(*(pStr+(y+2))+(x+8)) == 'N' )
+            c++; // ↓ -→ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+2))+(x-9)) == '[' && *(*(pStr+(y+2))+(x-8)) == 'N' )
+            c++; // ←- ←- ↓ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-4))+(x+3)) == '[' && *(*(pStr+(y-4))+(x+4)) == 'N' )
+            c++; // ↑ ↑ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-4))+(x-5)) == '[' && *(*(pStr+(y-4))+(x-4)) == 'N' )
+            c++; // ←- ↑ ↑ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-2))+(x+7)) == '[' && *(*(pStr+(y-2))+(x+8)) == 'N' )
+            c++; // ↑ -→ -→ 위치에 상대방 N있으면 check
     }
 
-    // PLAYER2 //
-    else {
-        int x = kx2, y = ky2;
 
-        //������
-        for (int i = x; i < 34; i += 4) {
-            if ( *(*(pStr+i)+(x-1)) == '[') break;
-            else if (*(*(pStr + y) + (i - 1)) == '<') {
+    else { //player2의 경우
+        int x = kx2, y = ky2; //현재 king의 좌표 저장
+
+        //오른쪽
+        for (int i = x; i < 34; i += 4) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + y) + (i - 1)) == '<') { // 상대방 R이나 Q가 있으면 check
                 if (*(*(pStr + y) + i) == 'R' || *(*(pStr + y) + i) == 'Q') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
         }
 
-        //����
-        for (int i = x; i >= 0; i -= 4) {
-            if ( *(*(pStr+i)+(x-1)) == '[') break;
-            else if (*(*(pStr + y) + (i - 1)) == '<') {
+        //왼쪽
+        for (int i = x; i >= 0; i -= 4) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + y) + (i - 1)) == '<') { // 상대방 R이나 Q가 있으면 check
                 if (*(*(pStr + y) + i) == 'R' || *(*(pStr + y) + i) == 'Q') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
         }
 
-        //��
-        for (int i = y; i < 17; i += 2) {
-            if ( *(*(pStr+i)+(x-1)) == '[') break;
-            else if (*(*(pStr + i) + (x - 1)) == '<') {
+        //위
+        for (int i = y; i < 17; i += 2) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + i) + (x - 1)) == '<') { // 상대방 R이나 Q가 있으면 check
                 if (*(*(pStr + i) + x) == 'R' || *(*(pStr + i) + x) == 'Q') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
         }
 
-        //�Ʒ�
-        for (int i = y; i >= 0; i -= 2) {
-            if ( *(*(pStr+i)+(x-1)) == '[') break;
-            else if (*(*(pStr + i) + (x - 1)) == '<') {
+        //아래
+        for (int i = y; i >= 0; i -= 2) { // 체스판 끝까지 확인
+            if ( *(*(pStr+i)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + i) + (x - 1)) == '<') { // 상대방 R이나 Q가 있으면 check
                 if (*(*(pStr + i) + x) == 'R' || *(*(pStr + i) + x) == 'Q') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
         }
 
-        //�밢��1
+        //대각선1
         while (1) {
             x += 4; y += 2;
-            if( *(*(pStr+y)+(x-1)) == '[') break;
-            else if (*(*(pStr + y) + (x - 1)) == '<') {
+            if( *(*(pStr+y)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + y) + (x - 1)) == '<') { // 상대방 B나 Q가 있으면 check
                 if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
-            if (x > 33 || y > 16) break;
+            if (x > 33 || y > 16) break; // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��2
+        //대각선2
         while (1) {
             x -= 4; y += 2;
-            if( *(*(pStr+y)+(x-1)) == '[') break;
-            else if (*(*(pStr + y) + (x - 1)) == '<') {
+            if( *(*(pStr+y)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
+            else if (*(*(pStr + y) + (x - 1)) == '<') { // 상대방 B나 Q가 있으면 check
                 if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
-                    c++;
-                    break;
+                    c++; break;
                 }
             }
-            if (x < 0 || y > 16) break;
+            if (x < 0 || y > 16) break; // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��3
-        int pp = 0; //pawn Ȯ�ο�
+        //대각선3
+        int pp = 0; //pawn 확인용 (대각선 기준 몇 칸 차이인지)
         while (1) {
             x -= 4; y -= 2; pp++;
-            if( *(*(pStr+y)+(x-1)) == '[') break;
+            if( *(*(pStr+y)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
             else if (*(*(pStr + y) + (x - 1)) == '<') {
-                if (*(*(pStr + y) + x) == 'P' && pp == 1) {
-                    c++;
-                    break;
-                } else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
-                    c++;
-                    break;
+                if (*(*(pStr + y) + x) == 'P' && pp == 1) { // 한 칸 대각선에 상대방 P가 있으면 check
+                    c++; break;
+                }
+                else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') { // 상대방 B나 Q가 있으면 check
+                    c++; break; // 체스판 끝까지 확인
                 }
             }
-            if (x < 0 || y < 0) break;
+            if (x < 0 || y < 0) break; // 체스판 끝까지 확인
         }
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
-        //�밢��4
-        pp = 0; //pawn Ȯ�ο�
+        //대각선4
+        pp = 0; //pawn 확인용 (대각선 기준 몇 칸 차이인지)
         while (1) {
             x += 4; y -= 2; pp++;
-            if( *(*(pStr+y)+(x-1)) == '[') break;
+            if( *(*(pStr+y)+(x-1)) == '[') break; // 본인 말이 가장 가까이에 있으면 check 아님
             else if (*(*(pStr + y) + (x - 1)) == '<') {
-                if (*(*(pStr + y) + x) == 'P' && pp == 1) {
-                    c++;
-                    break;
-                } else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') {
-                    c++;
-                    break;
+                if (*(*(pStr + y) + x) == 'P' && pp == 1) { // 한 칸 대각선에 상대방 P가 있으면 check
+                    c++; break;
+                }
+                else if (*(*(pStr + y) + (x - 1)) == 'Q' || *(*(pStr + y) + (x - 1)) == 'B') { // 상대방 B나 Q가 있으면 check
+                    c++; break;
                 }
             }
-            if (x > 33 || y < 0) break;
+            if (x > 33 || y < 0) break; // 체스판 끝까지 확인
         }
 
-        x=kx1, y=ky1;
+        x=kx1, y=ky1; // 좌표 원래대로 돌려놓기
 
         //knight
-        if( *(*(pStr+(y+4))+(x+3)) == '<' && *(*(pStr+(y+4))+(x+4)) == 'N' ) c++;
-        if( *(*(pStr+(y+4))+(x-5)) == '<' && *(*(pStr+(y+4))+(x-4)) == 'N' ) c++;
-        if( *(*(pStr+(y-2))+(x-9)) == '<' && *(*(pStr+(y-2))+(x-8)) == 'N' ) c++;
-        if( *(*(pStr+(y+2))+(x+7)) == '<' && *(*(pStr+(y+2))+(x+8)) == 'N' ) c++;
-        if( *(*(pStr+(y+2))+(x-9)) == '<' && *(*(pStr+(y+2))+(x-8)) == 'N' ) c++;
-        if( *(*(pStr+(y-4))+(x+3)) == '<' && *(*(pStr+(y-4))+(x+4)) == 'N' ) c++;
-        if( *(*(pStr+(y-4))+(x-5)) == '<' && *(*(pStr+(y-4))+(x-4)) == 'N' ) c++;
-        if( *(*(pStr+(y-2))+(x+7)) == '<' && *(*(pStr+(y-2))+(x+8)) == 'N' ) c++;
+        if( *(*(pStr+(y+4))+(x+3)) == '<' && *(*(pStr+(y+4))+(x+4)) == 'N' )
+            c++; // ↓ ↓ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+4))+(x-5)) == '<' && *(*(pStr+(y+4))+(x-4)) == 'N' )
+            c++; // ←- ↓ ↓ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-2))+(x-9)) == '<' && *(*(pStr+(y-2))+(x-8)) == 'N' )
+            c++; // ←- ←- ↑ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+2))+(x+7)) == '<' && *(*(pStr+(y+2))+(x+8)) == 'N' )
+            c++; // ↓ -→ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y+2))+(x-9)) == '<' && *(*(pStr+(y+2))+(x-8)) == 'N' )
+            c++; // ←- ←- ↓ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-4))+(x+3)) == '<' && *(*(pStr+(y-4))+(x+4)) == 'N' )
+            c++; // ↑ ↑ -→ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-4))+(x-5)) == '<' && *(*(pStr+(y-4))+(x-4)) == 'N' )
+            c++; // ←- ↑ ↑ 위치에 상대방 N있으면 check
+        if( *(*(pStr+(y-2))+(x+7)) == '<' && *(*(pStr+(y-2))+(x+8)) == 'N' )
+            c++; // ↑ -→ -→ 위치에 상대방 N있으면 check
     }
 
-    if(c != 0) return 1;
-    else return 0;
+    if(c != 0) return 1; // check인 경우가 없다
+    else return 0; // check인 경우가 있다.
 }
 
 int Checkmate(int player) {
     if(player == 1) {
-        Backpan();
+        Backpan(); // 확인 후 체스판을 처음 상태로 돌려놓기 위해 저장 (백업)
 
         for(int I=1;I<17;I+=2) {
             for(int J=2;J<34;J+=4) {
-                if ( *(*(pStr+I)+(J-1)) == '<' ) {
-                    switch (*(*(pStr+I)+J)) {
+                if ( *(*(pStr+I)+(J-1)) == '<' ) { // 판에 있는 모든 player1의 말을 대상으로 확인
+                    switch (*(*(pStr+I)+J)) { // 말의 종류에 따라 이동 가능한 위치 표시
                         case 'P': { Pawn(I,J); break;}
                         case 'R': { Rook(I,J); break;}
                         case 'N': { Knight(I,J); break;}
@@ -1024,35 +1065,37 @@ int Checkmate(int player) {
                         case 'K': { King(I,J); break;}
                     }
 
-                    //�̵� �� check ���°� �Ǵ� ���� .���� ����
+                    //이동 후 check 상태가 되는 곳은 .으로 변경
                     for(int i=0;i<8;i++) {
                         for(int j=0;j<8;j++) {
-                            Checkbackpan(); //�������� �ٽ� �̰ɷ� ������!
-                            int checkx=-1, checky=-1; //checkx = j, checky = i
-                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                            Checkbackpan(); //확인이 끝난 후 돌려놓을 판을 위해 저장해놓음 (백업용)
+                            int checkx=-1, checky=-1; // 이동을 금지시킬 행과 열 인덱스 저장용
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {  // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
                                 *(*(pStr+(2*i+1))+(4*j+1)) = '<';
                                 *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+I)+J);
                                 *(*(pStr+(2*i+1))+(4*j+3)) = '>';
                                 *(*(pStr+I)+(J-1)) = *(*(pStr+I)+J) = *(*(pStr+I)+(J+1)) = '.';
                                 Delete_s();
-                                if ( Check(1) == 1 ) { checkx = j; checky = i; } //check�� ��� ��ǥ ����
-                                Returncheckpan();
+                                if ( Check(1) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                                Returncheckpan(); //다시 현재 판으로 돌려놓음
                                 if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                                // 만약 check인 경우가 있어서 checkx, checky에 인덱스 값이 저장되어있으면 * -> . (이동 못함)
                             }
                         }
                     }
 
-                    //������ �� �ִ� ��ΰ� ���� ��� �ٽ�
+                    // 선택된 말이 움질일 수 있는 경로가 있는지 확인
                     for(int i=0;i<8;i++) {
                         for(int j=0;j<8;j++) {
                             if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
-                                F += 1;
+                                F += 1; // F >= 1이면 말이 움질일 수 있다는 것을 의미
                         }
                     }
 
-                    if(F!=0) {F=0; return 1;}
+                    if(F!=0) {F=0; return 1;} // 이동할 수 있는 곳이 적어도 하나 있으면 checkmate아님
                     else {
-                        for(int k=0;k<17;k++) strcpy(pan[k], backpan[k]);
+                        for(int k=0;k<17;k++)
+                            strcpy(pan[k], backpan[k]);
                         continue;
                     }
                 }
@@ -1062,12 +1105,12 @@ int Checkmate(int player) {
     }
 
     else {
-        Backpan();
+        Backpan(); // 확인 후 체스판을 처음 상태로 돌려놓기 위해 저장 (백업)
 
         for(int I=1;I<17;I+=2) {
             for(int J=2;J<34;J+=4) {
-                if ( *(*(pStr+I)+(J-1)) == '[' ) {
-                    switch (*(*(pStr+I)+J)) {
+                if ( *(*(pStr+I)+(J-1)) == '[' ) { // 판에 있는 모든 player2의 말을 대상으로 확인
+                    switch (*(*(pStr+I)+J)) { // 말의 종류에 따라 이동 가능한 위치 표시
                         case 'P': { Pawn(I,J); break;}
                         case 'R': { Rook(I,J); break;}
                         case 'N': { Knight(I,J); break;}
@@ -1076,41 +1119,42 @@ int Checkmate(int player) {
                         case 'K': { King(I,J); break;}
                     }
 
-                    //�̵� �� check ���°� �Ǵ� ���� .���� ����
+                    //이동 후 check 상태가 되는 곳은 .으로 변경
                     for(int i=0;i<8;i++) {
                         for(int j=0;j<8;j++) {
-                            Checkbackpan(); //�������� �ٽ� �̰ɷ� ������!
-                            int checkx=-1, checky=-1; //checkx = j, checky = i
-                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') {
+                            Checkbackpan(); //확인이 끝난 후 돌려놓을 판을 위해 저장해놓음 (백업용)
+                            int checkx=-1, checky=-1; // 이동을 금지시킬 행과 열 인덱스 저장용
+                            if(*(*(pStr+(2*i+1))+(4*j+2)) == '*') { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
                                 *(*(pStr+(2*i+1))+(4*j+1)) = '[';
                                 *(*(pStr+(2*i+1))+(4*j+2)) = *(*(pStr+I)+J);
                                 *(*(pStr+(2*i+1))+(4*j+3)) = ']';
                                 *(*(pStr+I)+(J-1)) = *(*(pStr+I)+J) = *(*(pStr+I)+(J+1)) = '.';
                                 Delete_s();
-                                if ( Check(2) == 1 ) { checkx = j; checky = i; } //check�� ��� ��ǥ ����
-                                Returncheckpan();
+                                if ( Check(2) == 1 ) { checkx = j; checky = i; } //check인 경우 좌표 저장
+                                Returncheckpan(); //다시 현재 판으로 돌려놓음
                                 if (checkx >= 0) {*(*(pStr+(2*checky+1))+(4*checkx+2)) = '.';}
+                                // 만약 check인 경우가 있어서 checkx, checky에 인덱스 값이 저장되어있으면 * -> . (이동 못함)
                             }
                         }
                     }
 
-                    //������ �� �ִ� ��ΰ� ���� ��� �ٽ�
+                    // 선택된 말이 움질일 수 있는 경로가 있는지 확인
                     for(int i=0;i<8;i++) {
                         for(int j=0;j<8;j++) {
                             if(*(*(pStr+(2*i+1))+(4*j+2)) == '*')
-                                F += 1;
+                                F += 1; // F >= 1이면 말이 움질일 수 있다는 것을 의미
                         }
                     }
 
-                    if(F!=0) {F=0; return 1;}
+                    if(F!=0) {F=0; return 1;} // 이동할 수 있는 곳이 적어도 하나 있으면 checkmate아님
                     else {
-
+                        for(int k=0;k<17;k++)
+                            strcpy(pan[k], backpan[k]);
                         continue;
                     }
                 }
             }
         }
-        if (F==0) return F;
+        if (F==0) return F; // checkmate인 경우 return 0;
     }
 }
-
