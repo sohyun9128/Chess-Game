@@ -9,13 +9,14 @@ char backupBoard[17][34]; //되돌리기 위한 백그라운드 저장용 체스
 char backupCheckBoard[17][34]; //check여부 확인 시 사용할 체스판
 char boardFile[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess.txt"; // 새 게임용 체스판
 char boardSaveFile[100] = "C:\\Users\\SoHyun Kim\\Desktop\\chess_save.txt"; // 저장된 체스판
+char deadPiece1[20] = {""}, deadPiece2[20] = {""}; // 죽은 말을 저장할 배열
 static int startPlayer; // 시작하는 player 확인용
 static int winner; // 승리한 player 확인용 (1 : player 1 승, 2 : player 2 승)
 static int countStar = 0; // 선택한 말이 움직일 수 있는 위치의 수, countStar == 0 -> 다시 말 선택
 static int kingX1 = 14, kingY1 = 1; // player 1의 King 좌표 (check여부 확인시 이용)
 static int kingX2 = 14, kingY2 = 15; // player 2의 King 좌표 (check여부 확인시 이용)
 static int kingX3 = -1, kingY3 = -1; // King을 이동시킬 때 check 확인 좌표
-char deadPiece1[20] = {""}, deadPiece2[20] = {""}; // 죽은 말을 저장할 배열
+static int longCastlingCheck[2] = {0,0}, shortCastlingCheck[2] = {0,0}; // 캐슬링 가능 여부 확인용
 
 
 void LoadChessGame(int); // 게임을 시작하기 전 필요한 과정
@@ -37,6 +38,7 @@ void King(int, int); // K 선택시 이동 가능 위치 *로 표시
 int Check(int, int); // check 여부 확인
 int Checkmate(int); // 종료 조건
 void Promotion(int, int, int, int); // 프로모션 (특수룰)
+void Castling(int); // 캐슬링 (특수룰)
 void Clear(void);
 int getch(void);
 
@@ -72,7 +74,7 @@ int main() {
                         MovePiece1(); // player 1 이동
 
                         if (winner == 1 || winner == 2)
-                        { // 만약 king이 잡히거나 checkmate상태가 되거나 기권을 하면 게임 종료
+                        { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
                             break;
                         }
                         else
@@ -88,7 +90,7 @@ int main() {
                         MovePiece2(); // player 2 이동
 
                         if (winner == 1 || winner == 2)
-                        { // 만약 king이 잡히거나 checkmate상태가 되거나 기권을 하면 게임 종료
+                        { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
                             break;
                         }
                         else
@@ -113,7 +115,7 @@ int main() {
                     {
                         MovePiece1(); // player 1 이동
 
-                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate상태가 되면 게임 종료
+                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate 상태가 되면 게임 종료
                             break;
                         }
                         else
@@ -128,7 +130,7 @@ int main() {
                     {
                         MovePiece2(); //player 2 이동
 
-                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate상태가 되면 게임 종료
+                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate 상태가 되면 게임 종료
                             break;
                         }
                         else
@@ -244,10 +246,18 @@ void LoadChessGame(int k)
             strcpy(deadPiece1, input);
             I++;
         }
-        else
+        else if (I == 18)
         {
             startPlayer = input[0] - 48;
+            longCastlingCheck[0] = input[2] - 48;
+            longCastlingCheck[1] = input[4] - 48;
+            shortCastlingCheck[0] = input[6] - 48;
+            shortCastlingCheck[1] = input[8] - 48;
         }
+        /*else if (I == 19)
+        {
+
+        }*/
     }
 
     fclose(fp); // 파일 닫기
@@ -406,6 +416,7 @@ void MovePiece1(void)
 { // player 1 이동함수
     char before[5], after[3]; // 이동시킬 말, 위치 입력받을 변수 ( save나 exit 입력받아야하는 경우가 있어서 크기 5 )
     int nowY = 0, nowX = 0, afterY = 0, afterX = 0; // 이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
+    int didCastling = 0; // 캐슬링 할 경우 1
     BackupBoard();
 
     // 이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
@@ -487,6 +498,8 @@ void MovePiece1(void)
                     case 'K':
                     {
                         King(nowY, nowX);
+                        Castling(1);
+                        shortCastlingCheck[0] = longCastlingCheck[0] = 1;
                         break;
                     }
                 }
@@ -599,6 +612,7 @@ void MovePiece1(void)
             } // 본인 말이 있는 위치 선택 시 다시 입력
             else
             {
+                if (board[afterY][afterX - 1] == '*') { didCastling = 1; }
                 DeleteStar();
                 break;
             } // 이동할 위치 정해졌으니 *표시 모두 제거
@@ -615,6 +629,24 @@ void MovePiece1(void)
     if (winner != 2)
     { // 게임이 종료되는 경우가 아니면 실행
 
+        //캐슬링 실행 시
+        if (didCastling == 1) { //longcastling
+
+            if (afterX == 22) {
+                board[1][17] = '<';
+                board[1][18] = 'R';
+                board[1][19] = '>';
+                board[1][29] = board[1][30] = board[1][31] = '.';
+            }
+            else if (afterX == 6) {
+                board[1][9] = '<';
+                board[1][10] = 'R';
+                board[1][11] = '>';
+                board[1][1] = board[1][2] = board[1][3] = '.';
+            }
+        }
+
+
         // 이동시킬 말이 King인 경우 변경될 좌표 저장 (for check확인)
         if (board[nowY][nowX] == 'K')
         {
@@ -625,10 +657,9 @@ void MovePiece1(void)
         // 왕 잡으면 end
         if (board[afterY][afterX] == 'K') {winner = 1;}
 
-        // 자리 옮기기
+        // 상대말 말을 잡은 경우 체스판 프린트시 표시
         if (board[afterY][(afterX - 1)] == '[')
-        { // 상대말 말을 잡은 경우 체스판 프린트시 표시
-
+        {
             switch (backupBoard[afterY][afterX])
             { // "DIE-" 뒤에 이어서 저장 (strcat() 이용)
                 case 'P':
@@ -659,6 +690,15 @@ void MovePiece1(void)
             }
         }
 
+        // R 움직이면 그 이후 캐슬링 불가
+        if (board[nowY][nowX] == 'R' && nowX == 2) {
+            shortCastlingCheck[0] = 1;
+        }
+        else if (board[nowY][nowX] == 'R' && nowX == 30) {
+            longCastlingCheck[0] = 1;
+        }
+
+        // 자리 옮기기
         // 위치 변경 후 기존 자리는 ...으로 표시
         board[afterY][afterX] = board[nowY][nowX];
         board[afterY][++afterX] = '>';
@@ -683,6 +723,7 @@ void MovePiece2(void)
 { // player 2 이동함수
     char before[5], after[3];  //이동시킬 말, 위치 입력받을 변수 (save나 exit 입력받아야하는 경우가 있어서 크기: 5)
     int afterY = 0, afterX = 0, nowY = 0, nowX = 0; //이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
+    int didCastling = 0;
     BackupBoard();
 
     // 이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
@@ -760,6 +801,8 @@ void MovePiece2(void)
                     case 'K':
                     {
                         King(nowY, nowX);
+                        Castling(2);
+                        shortCastlingCheck[1] = longCastlingCheck[1] = 1;
                         break;
                     }
                 }
@@ -869,6 +912,7 @@ void MovePiece2(void)
             } // 본인 말이 있는 위치 선택 시 다시 입력
             else
             {
+                if (board[afterY][afterX - 1] == '*') {didCastling = 1;}
                 DeleteStar();
                 break;
             } // 이동할 위치 정해졌으니 *표시 모두 제거
@@ -884,6 +928,23 @@ void MovePiece2(void)
 
     if (winner != 1)
     { // 게임이 종료되는 경우가 아니면 실행
+
+        //캐슬링 실행 시
+        if (didCastling == 1) { //longcastling
+
+            if (afterX == 22) {
+                board[15][17] = '[';
+                board[15][18] = 'R';
+                board[15][19] = ']';
+                board[15][29] = board[15][30] = board[15][31] = '.';
+            }
+            else if (afterX == 6) {
+                board[15][9] = '[';
+                board[15][10] = 'R';
+                board[15][11] = ']';
+                board[15][1] = board[15][2] = board[15][3] = '.';
+            }
+        }
 
         // 이동시킬 말이 King인 경우 변경될 좌표 저장 (for check확인)
         if (board[nowY][nowX] == 'K')
@@ -928,6 +989,14 @@ void MovePiece2(void)
                     break;
                 }
             }
+        }
+
+        // R 움직이면 그 이후 캐슬링 불가
+        if (board[nowY][nowX] == 'R' && nowX == 2) {
+            shortCastlingCheck[1] = 1;
+        }
+        else if (board[nowY][nowX] == 'R' && nowX == 30) {
+            longCastlingCheck[1] = 1;
         }
 
         // 위치 변경 후 기존 자리는 '...'으로 표시
@@ -1534,7 +1603,8 @@ void SaveGame(void)
             fprintf(fp, "%s \n", deadPiece1);
         }
         else if (i == 18) {
-            fprintf(fp, "%d", startPlayer);
+            fprintf(fp, "%d,%d,%d,%d,%d", startPlayer, longCastlingCheck[0], longCastlingCheck[1],
+                    shortCastlingCheck[0], shortCastlingCheck[1]);
         }
         else {
             fprintf(fp, "%s \n", board[i]);
@@ -2219,6 +2289,86 @@ void Promotion(int beforex, int beforey, int aftery, int player) {
             else
             { // 다른 문자 입력하면 PASS!
                 printf("You can not change P to %c\n", Change[0]);
+            }
+        }
+    }
+}
+
+/**
+    함수 이름 : Castling
+    함수 설명 : 특수룰(캐슬링), 다음과 같은 조건이 성립할 때 K와 R을 정해진 위치로 동시에 이동시킬 수 있다.
+    파라미터 이름 : player
+    파라미터 설명
+        player : 실행시키는 player 번호 (1 or 2)
+    @ exception 예외처리
+    //
+**/
+void Castling(int player) {
+    int piece = 0;
+
+    if (player == 1) {
+        /**longcastling**/
+        if (longCastlingCheck[0] == 0) { // K과 R이 모두 움직이지 않았다.
+            for (int i = (kingX1 + 4) ; i < 29 ; i += 4)
+            {
+                if (board[kingY1][i] != '.' && board[kingY1][i] != '*')
+                {
+                    piece += 1;
+                    break;
+                }
+            }
+
+            if (piece == 0) {
+                board[kingY1][kingX1 + 7] = board[kingY1][kingX1 + 8] = board[kingY1][kingX1 + 9] = '*';
+            }
+        }
+        piece = 0;
+        /**shortcasting**/
+        if (shortCastlingCheck[0] == 0) {
+            for (int i = (kingX1 - 4) ; i > 2 ; i -= 4)
+            {
+                if (board[kingY1][i] != '.' && board[kingY1][i] != '*')
+                {
+                    piece += 1;
+                    break;
+                }
+            }
+
+            if (piece == 0) {
+                board[kingY1][kingX1 - 7] = board[kingY1][kingX1 - 8] = board[kingY1][kingX1 - 9] = '*';
+            }
+        }
+    }
+    else if (player == 2) {
+        /**longcastling**/
+        if (longCastlingCheck[1] == 0) { // K과 R이 모두 움직이지 않았다.
+            for (int i = (kingX2 + 4) ; i < 29 ; i += 4)
+            {
+                if (board[kingY2][i] != '.' && board[kingY2][i] != '*')
+                {
+                    piece += 1;
+                    break;
+                }
+            }
+
+            if (piece == 0) {
+                board[kingY2][kingX2 + 7] = board[kingY2][kingX2 + 8] = board[kingY2][kingX2 + 9] = '*';
+            }
+        }
+        piece = 0;
+        /**shortcasting**/
+        if (shortCastlingCheck[1] == 0) {
+            for (int i = (kingX2 - 4) ; i > 2 ; i -= 4)
+            {
+                if (board[kingY2][i] != '.' && board[kingY2][i] != '*')
+                {
+                    piece += 1;
+                    break;
+                }
+            }
+
+            if (piece == 0) {
+                board[kingY2][kingX2 - 7] = board[kingY2][kingX2 - 8] = board[kingY2][kingX2 - 9] = '*';
             }
         }
     }
