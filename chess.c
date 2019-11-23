@@ -17,6 +17,7 @@ static int kingX1 = 14, kingY1 = 1; // player 1의 King 좌표 (check여부 확�
 static int kingX2 = 14, kingY2 = 15; // player 2의 King 좌표 (check여부 확인시 이용)
 static int kingX3 = -1, kingY3 = -1; // King을 이동시킬 때 check 확인 좌표
 static int longCastlingCheck[2] = {0,0}, shortCastlingCheck[2] = {0,0}; // 캐슬링 가능 여부 확인용
+static int enPassant1[4]= {-1, -1, -1, -1}, enPassant2[4] = {-1, -1, -1, -1}; // 앙파상 가능 위치 확인용 좌표
 
 
 void LoadChessGame(int); // 게임을 시작하기 전 필요한 과정
@@ -41,6 +42,7 @@ void Promotion(int, int, int, int); // 프로모션 (특수룰)
 void Castling(int); // 캐슬링 (특수룰)
 void Clear(void);
 int getch(void);
+void ChangePiece(int, int, char, char, char);
 
 
 int main() {
@@ -58,107 +60,52 @@ int main() {
         scanf("%d", &menu);
         Clear(); // 메뉴 선택
 
-        switch (menu)
+        if (menu == 1 || menu == 2)
         {
-            case 1:
-            { // New game
-                LoadChessGame(1);
-                PrintRule();
-                PrintBoard(); // 새 게임 판을 로드하여 프린트
+            if (menu == 1) { LoadChessGame(1); }
+            else { LoadChessGame(2); }
 
-                while (1)
+            PrintRule();
+            PrintBoard(); // 새 게임 판을 로드하여 프린트
+
+            while (1)
+            {
+                if (startPlayer == 1)
                 {
+                    MovePiece1(); // player 1 이동
 
-                    if (startPlayer == 1)
-                    {
-                        MovePiece1(); // player 1 이동
-
-                        if (winner == 1 || winner == 2)
-                        { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
-                            break;
-                        }
-                        else
-                        {
-                            Clear();
-                            PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
-                            startPlayer = 2;
-                        }
+                    if (winner == 1 || winner == 2)
+                    { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
+                        break;
                     }
-
-                    if (startPlayer == 2)
+                    else
                     {
-                        MovePiece2(); // player 2 이동
-
-                        if (winner == 1 || winner == 2)
-                        { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
-                            break;
-                        }
-                        else
-                        {
-                            Clear();
-                            PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
-                            startPlayer = 1;
-                        }
+                        PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
+                        startPlayer = 2;
                     }
-
                 }
-                break;
-            }
-            case 2:
-            { // Load
-                LoadChessGame(2);
-                PrintBoard(); // 새 게임 판을 로드하여 프린트
 
-                while (1)
+                if (startPlayer == 2)
                 {
-                    if (startPlayer == 1)
-                    {
-                        MovePiece1(); // player 1 이동
+                    MovePiece2(); // player 2 이동
 
-                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate 상태가 되면 게임 종료
-                            break;
-                        }
-                        else
-                        {
-                            Clear();
-                            PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
-                            startPlayer = 2;
-                        }
+                    if (winner == 1 || winner == 2)
+                    { // 만약 king이 잡히거나 checkmate 상태가 되거나 기권을 하면 게임 종료
+                        break;
                     }
-
-                    if (startPlayer == 2)
+                    else
                     {
-                        MovePiece2(); //player 2 이동
-
-                        if (winner == 1 || winner == 2) { // 만약 king이 잡히거나 checkmate 상태가 되면 게임 종료
-                            break;
-                        }
-                        else
-                        {
-                            Clear();
-                            PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
-                            startPlayer = 1;
-                        }
+                        PrintBoard(); // 이동 후 변경된 체스판을 정리된 화면에 프린트
+                        startPlayer = 1;
                     }
-
                 }
-                break;
             }
-            case 3:
-            { // Help (도움말 출력)
-                PrintRule();
-                break;
-            }
-            default:
-                break;
         }
-
-        if (menu == 4)
-        { // 게임 종료
+        else if (menu == 3) { PrintRule(); }
+        else if (menu == 4) {
             printf("게임을 종료합니다. 감사합니다.");
             break; // while문 종료
         }
-
     }
     return 0;
 }
@@ -201,23 +148,18 @@ int getch()
 /**
     함수 이름 : LoadChessGame
     함수 설명 : 게임을 시작하기 위해 필요한 과정을 수행한다. (텍스트 파일에서 체스판을 읽어 지정된 배열에 정보를 저장한다)
-    파라미터 이름 :
+    파라미터 이름 : mode
     파라미터 설명
-        파라미터 이름 :
+        mode : 1이면 새 게임, 2면 저장된 게임
     참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
-    @ exception 예외처리
-    //
 **/
-void LoadChessGame(int k)
+void LoadChessGame(int  mode )
 {
     FILE *fp = NULL; // 체스판이 저장된 텍스트 파일을 저장할 공간 선언
     char input[50]; // 파일 속 문자열을 읽어서 배열에 저장하기 위한 중간 문자열
     int I = -1; // while문 사용
 
-    if (k == 1)
-    { // 새 게임용 텍스트파일 열기
-        fp = fopen(boardFile, "r");
-    }
+    if (mode == 1) { fp = fopen(boardFile, "r"); } // 새 게임
     else
     { // 저장된 게임용 텍스트파일 실행
         fp = fopen(boardSaveFile, "r");
@@ -254,12 +196,7 @@ void LoadChessGame(int k)
             shortCastlingCheck[0] = input[6] - 48;
             shortCastlingCheck[1] = input[8] - 48;
         }
-        /*else if (I == 19)
-        {
-
-        }*/
     }
-
     fclose(fp); // 파일 닫기
 }
 
@@ -268,8 +205,6 @@ void LoadChessGame(int k)
     함수 이름 : PrintRule
     함수 설명 : 게임진행 방법과 규칙을 출력한다.
     참조 함수들 : getch(), printf(), Clear();
-    @ exception 예외처리
-    //
 **/
 void PrintRule()
 {
@@ -279,16 +214,7 @@ void PrintRule()
     printf("\n<  > :Player 1, [  ] : Player 2\n");
     printf("\n1. 이동 시키길 원하는 말의 좌표를 입력한다.");
     printf("\n2. * 표시(이동 가능 공간) 중 원하는 곳의 좌표를 입력한다.\n\n\n(엔터를 눌러주세요)");
-    getch();
-    Clear();
 
-    printf("\n킹(K)은 주위 한칸을 이동할 수 있습니다.\n"
-           "퀸(Q)은 직선과 대각선을 기물이 방해하지 않는다면 원하는만큼 이동할 수 있습니다.\n"
-           "룩(R)은 직선 거리를 기물이 방해하지 않는다면 원하는만큼 이동할 수 있습니다.\n"
-           "비숍(B)은 대각선 거리를 기물이 방해하지 않는다면 원하는만큼 이동할 수 있습니다.\n"
-           "나이트(N)는 직선한칸, 대각선 한칸으로 한번에 이동합니다. 가로막는 기물이 아군이든 적군이든 상관없이 넘을 수 있습니다.\n"
-           "폰(P)은 기본적으로는 오직 앞으로 한칸 이동할 수 있습니다만 시작위치에서는 2칸이동할 수도 있습니다.\n"
-           "(이동과는 별개로, 폰은 기물을 먹을때는 오직 대각선으로만 먹을 수 있습니다.)\n\n\n(엔터를 눌러주세요)");
     getch(); // 사용자가 Enter 누르면 종료
     Clear();
 }
@@ -298,12 +224,11 @@ void PrintRule()
     함수 이름 : PrintBoard
     함수 설명 : 배열에 저장된
     참조 함수들 : printf()
-    @ exception 예외처리
-    //
 **/
 void PrintBoard(void)
 { // 체스판 출력
     int pnum = 0;
+    Clear();
     printf("%s\n", deadPiece2); // player1이 잡은 말 출력
     printf("    A   B   C   D   E   F   G   H\n"); // 열 표시
 
@@ -319,7 +244,6 @@ void PrintBoard(void)
             pnum++;
         }
     }
-
     printf("%s\n", deadPiece1); // player2가 잡은 말 출력
 }
 
@@ -328,15 +252,11 @@ void PrintBoard(void)
     함수 이름 : BackupBoard
     함수 설명 : 현재 플레이 중인 게임판을 백업용 게임판에 저장한다.
     참조 함수들 : strcpy()
-    @ exception 예외처리
-    //
 **/
 void BackupBoard(void)
 { // 백그라운드 체스판에 현재 판 복사
     for (int i = 0; i < 17; i++)
-    {
-        strcpy(backupBoard[i], board[i]); // 한줄 씩 board를 backupBoard에 복사한다
-    }
+    { strcpy(backupBoard[i], board[i]); } // 한줄 씩 board를 backupBoard에 복사한다
 }
 
 
@@ -344,15 +264,11 @@ void BackupBoard(void)
     함수 이름 : BackupCheckBoard
     함수 설명 : 체크여부 확인시 임의로 이동시킨 말을 원래 위치로 되돌려놓기 위해 게임판을 백업한다.
     참조 함수들 : strcpy()
-    @ exception 예외처리
-    //
 **/
 void BackupCheckBoard(void)
 { // 체크여부확인 체스판에 현재 판 복사
     for (int i = 0; i < 17; i++)
-    {
-        strcpy(backupCheckBoard[i], board[i]);
-    }
+    { strcpy(backupCheckBoard[i], board[i]); }
 }
 
 
@@ -360,15 +276,11 @@ void BackupCheckBoard(void)
     함수 이름 : ReturnCheckBoard
     함수 설명 : 체크여부 확인 후 게임판을 원상복귀 시킨다.
     참조 함수들 : strcpy()
-    @ exception 예외처리
-    //
 **/
 void ReturnCheckBoard(void)
 { // 현재 판에 체크여부확인 체스판 복사
     for (int i = 0; i < 17; i++)
-    {
-        strcpy(board[i], backupCheckBoard[i]);
-    }
+    { strcpy(board[i], backupCheckBoard[i]); }
 }
 
 
@@ -387,12 +299,24 @@ void DeleteStar(void)
         for (int j = 0; j < 49; j++)
         {
             if (board[i][j] == '*')
-            { // 모든 판을 체크하여 *표시를 backupBoard에 저장된 원래 문자로 돌려놓음
-                Back = backupBoard[i][j];
-                board[i][j] = Back;
-            }
+            { board[i][j] = backupBoard[i][j]; } // 모든 판을 체크하여 *표시를 backupBoard에 저장된 원래 문자로 돌려놓음
         }
     }
+}
+
+
+/**
+    함수 이름 : ChangePiece
+    함수 설명 : 말을 이동시킨다.
+    파라미터 이름 : y, x, one, two, three
+    파라미터 설명
+        y, x : 이동시킬 말의 y, x좌표
+        one, two, three : x좌표를 중심으로 바꿀 3개의 문자
+**/
+void ChangePiece(int y, int x, char one, char two, char three) {
+    board[y][x-1] = one;
+    board[y][x] = two;
+    board[y][x+1] = three;
 }
 
 
@@ -409,20 +333,18 @@ void DeleteStar(void)
                G - 이동 시킬 위치의 좌표를 입력받아 이동가능 여부를 확인한 후 이동시키거나 좌표를 다시 입력받는다.
                   (상대방의 말을 잡은 경우 해당 배열에 정보를 저장하여 이후 출력시킬 수 있도록 한다.)
     참조 함수들 : printf(), scanf(), strcmp(), strlen(),
-    @ exception 예외처리
-    //
 **/
 void MovePiece1(void)
 { // player 1 이동함수
     char before[5], after[3]; // 이동시킬 말, 위치 입력받을 변수 ( save나 exit 입력받아야하는 경우가 있어서 크기 5 )
     int nowY = 0, nowX = 0, afterY = 0, afterX = 0; // 이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
-    int didCastling = 0; // 캐슬링 할 경우 1
+    int didCastling = 0, didEnPassant = 0; // 캐슬링 할 경우 1
     BackupBoard();
 
     // 이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
     while (1)
     {
-
+        /** A **/
         if (Checkmate(1) == 0)
         { // 만약 player1이 움직일 수 있는 말이 없는 경우 player2 승리, 게임 종료
             winner = 2;
@@ -436,6 +358,7 @@ void MovePiece1(void)
             }
         } // 아니면 다시 실행중인 판 복구
 
+        /** B **/
         printf("\n< Player 1 >\n(SAVE: save game, GG: give up)\nWhat? : ");
         scanf("%s", before);
 
@@ -451,9 +374,15 @@ void MovePiece1(void)
             break;
         }
         else if (strlen(before) == 2)
-        {
+        {   /** C **/
             nowY = 2 * (before[1] - 48) + 1; // 입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
             nowX = 4 * (before[0] - 64) - 2; // 입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
+
+            if ( (nowX < 0 || nowX > 32) || (nowY < 0 || nowY > 16)  )
+            {
+                printf("again!\n");
+                continue;
+            }
 
             if (board[nowY][(nowX - 1)] == '[')
             {
@@ -469,42 +398,24 @@ void MovePiece1(void)
             else
             { // 선택한 말의 종류에 따라 이동 가능한 곳 *으로 표시
                 switch (board[nowY][nowX])
-                {
+                {   /** D **/
                     case 'P':
-                    {
-                        Pawn(nowY, nowX);
-                        break;
-                    }
+                    { Pawn(nowY, nowX); break; }
                     case 'R':
-                    {
-                        Rook(nowY, nowX);
-                        break;
-                    }
+                    { Rook(nowY, nowX); break; }
                     case 'N':
-                    {
-                        Knight(nowY, nowX);
-                        break;
-                    }
+                    { Knight(nowY, nowX); break;}
                     case 'B':
-                    {
-                        Bishop(nowY, nowX);
-                        break;
-                    }
+                    { Bishop(nowY, nowX); break; }
                     case 'Q':
-                    {
-                        Queen(nowY, nowX);
-                        break;
-                    }
+                    { Queen(nowY, nowX); break; }
                     case 'K':
-                    {
-                        King(nowY, nowX);
-                        Castling(1);
-                        shortCastlingCheck[0] = longCastlingCheck[0] = 1;
+                    { King(nowY, nowX); Castling(1);
                         break;
                     }
                 }
 
-                // 이동 후 check 상태가 되는 곳은 .으로 변경
+                /** E **/
                 for (int i = 0; i < 8; i++)
                 {
                     for (int j = 0; j < 8; j++)
@@ -514,10 +425,8 @@ void MovePiece1(void)
 
                         if (board[2 * i + 1][4 * j + 2] == '*')
                         { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
-                            board[2 * i + 1][4 * j + 1] = '<';
-                            board[2 * i + 1][4 * j + 2] = board[nowY][nowX];
-                            board[2 * i + 1][4 * j + 3] = '>';
-                            board[nowY][(nowX - 1)] = board[nowY][nowX] = board[nowY][(nowX + 1)] = '.';
+                            ChangePiece( 2*i+1, 4*j+2, '<', board[nowY][nowX], '>');
+                            ChangePiece( nowY, nowX, '.', '.', '.');
                             DeleteStar();
 
                             if (board[2 * i + 1][4 * j + 2] != 'K')
@@ -550,15 +459,13 @@ void MovePiece1(void)
                     }
                 }
 
-                // 선택된 말이 움질일 수 있는 경로가 있는지 확인
+                /** F **/
                 for (int i = 0; i < 8; i++)
                 {
                     for (int j = 0; j < 8; j++)
                     {
                         if (board[2 * i + 1][4 * j + 2] == '*')
-                        {
-                            countStar += 1; // countStar >= 1 이면 이동 시킬 수 있다
-                        }
+                        { countStar += 1; } // countStar >= 1 이면 이동 시킬 수 있다
                     }
                 }
                 if (countStar == 0)
@@ -569,7 +476,6 @@ void MovePiece1(void)
                 else
                 { // 이동 시킬 수 있는 위치가 있는 경우
                     countStar = 0; // 다음 이용을 위해 초기화
-                    Clear();
                     PrintBoard(); // 이동 가능 위치 표시된 체스판 출력
                     break;
                 }
@@ -578,13 +484,12 @@ void MovePiece1(void)
         else
         {
             printf("again\n");
-            Clear();
             PrintBoard();
             continue;
         }
     }
 
-    // 선택된 말 이동시킬 경로 입력받아 이동시키기
+    /** G **/
     while (1)
     {
         if (winner == 2) {break;} // 앞에서 exit을 입력받았거나 종료 조건이 만족된 경우 종료
@@ -599,6 +504,41 @@ void MovePiece1(void)
 
             Promotion(nowX, nowY, afterY, 1); // 특수룰
 
+            /**캐슬링 할 수 있는데 안하는 경우**/
+            if (board[afterY][afterX] != 'a' ) {
+                if (board[kingY1][kingX1 + 8] == 'a') {
+                    ChangePiece(kingY1, kingX1 + 8, '.', '.', '.');
+                }
+                if (board[kingY1][kingX1 - 8] == 'a') {
+                    ChangePiece(kingY1, kingX1 - 8, '.', '.', '.');
+                }
+            }
+
+            /**앙파상 할 수 있는데 안하는 경우**/
+            if (board[afterY][afterX] != 'n') {
+                if ( board[enPassant1[0]][enPassant1[1]] == 'n') {
+                    ChangePiece(enPassant1[0], enPassant1[1], '.', '.', '.');
+                    enPassant1[0] = enPassant1[2] = -1;
+                }
+                if ( board[enPassant1[2]][enPassant1[3]] == 'n') {
+                    ChangePiece(enPassant1[2], enPassant1[3], '.', '.', '.');
+                    enPassant1[2] = enPassant1[3] = -1;
+                }
+            }
+
+            /**캐슬링 하는 경우**/
+            if (board[afterY][afterX] == 'a') {
+                didCastling = 1;
+                ChangePiece(afterY, afterX, '.', '.', '.');
+                break;
+            }
+                /**앙파상 하는 경우**/
+            else if (board[afterY][afterX] == 'n') {
+                didEnPassant = 1;
+                DeleteStar();
+                break;
+            }
+
             if (board[afterY][afterX] != '*')
             {
                 printf("again\n");
@@ -612,7 +552,6 @@ void MovePiece1(void)
             } // 본인 말이 있는 위치 선택 시 다시 입력
             else
             {
-                if (board[afterY][afterX - 1] == '*') { didCastling = 1; }
                 DeleteStar();
                 break;
             } // 이동할 위치 정해졌으니 *표시 모두 제거
@@ -620,7 +559,6 @@ void MovePiece1(void)
         else
         {
             printf("again\n");
-            Clear();
             PrintBoard();
             continue;
         }
@@ -629,29 +567,44 @@ void MovePiece1(void)
     if (winner != 2)
     { // 게임이 종료되는 경우가 아니면 실행
 
-        //캐슬링 실행 시
+        /**캐슬링 실행**/
         if (didCastling == 1) { //longcastling
 
             if (afterX == 22) {
-                board[1][17] = '<';
-                board[1][18] = 'R';
-                board[1][19] = '>';
-                board[1][29] = board[1][30] = board[1][31] = '.';
+                ChangePiece(1, 18, '<', 'R', '>');
+                ChangePiece(1, 30, '.', '.', '.');
             }
             else if (afterX == 6) {
-                board[1][9] = '<';
-                board[1][10] = 'R';
-                board[1][11] = '>';
-                board[1][1] = board[1][2] = board[1][3] = '.';
+                ChangePiece(1, 10, '<', 'R', '>');
+                ChangePiece(1, 2, '.', '.', '.');
             }
+            DeleteStar();
         }
 
+        /**앙파상 실행 시**/
+        if (didEnPassant == 1) {
+            strcat(deadPiece2, "[P]");
+            ChangePiece( afterY - 2, afterX, '.', '.', '.');
+        }
+
+        /**앙파상으로 먹을 수 있는 좌표 저장**/
+        if (board[nowY][nowX] == 'P' && afterY == nowY + 4) {
+            if (board[afterY][afterX+3] == '[' && board[afterY][afterX+4] == 'P') {
+                enPassant2[0] = afterY-2;
+                enPassant2[1] = afterX;
+            }
+            if (board[afterY][afterX-5] == '[' && board[afterY][afterX-4] == 'P') {
+                enPassant2[2] = afterY-2;
+                enPassant2[3] = afterX;
+            }
+        }
 
         // 이동시킬 말이 King인 경우 변경될 좌표 저장 (for check확인)
         if (board[nowY][nowX] == 'K')
         {
             kingX1 = afterY;
             kingY1 = afterX;
+            longCastlingCheck[0] = shortCastlingCheck[0] = 1;
         }
 
         // 왕 잡으면 end
@@ -663,30 +616,15 @@ void MovePiece1(void)
             switch (backupBoard[afterY][afterX])
             { // "DIE-" 뒤에 이어서 저장 (strcat() 이용)
                 case 'P':
-                {
-                    strcat(deadPiece2, "[P]");
-                    break;
-                }
+                { strcat(deadPiece2, "[P]"); break; }
                 case 'R':
-                {
-                    strcat(deadPiece2, "[R]");
-                    break;
-                }
+                { strcat(deadPiece2, "[R]"); break; }
                 case 'B':
-                {
-                    strcat(deadPiece2, "[B]");
-                    break;
-                }
+                { strcat(deadPiece2, "[B]"); break; }
                 case 'N':
-                {
-                    strcat(deadPiece2, "[N]");
-                    break;
-                }
+                { strcat(deadPiece2, "[N]"); break; }
                 case 'Q':
-                {
-                    strcat(deadPiece2, "[Q]");
-                    break;
-                }
+                { strcat(deadPiece2, "[Q]"); break; }
             }
         }
 
@@ -699,16 +637,19 @@ void MovePiece1(void)
         }
 
         // 자리 옮기기
-        // 위치 변경 후 기존 자리는 ...으로 표시
-        board[afterY][afterX] = board[nowY][nowX];
-        board[afterY][++afterX] = '>';
-        afterX--;
-        board[afterY][--afterX] = '<';
-        board[nowY][nowX] = '.';
-        board[nowY][++nowX] = '.';
-        nowX--;
-        board[nowY][--nowX] = '.';
+        ChangePiece(afterY, afterX, '<', board[nowY][nowX], '>');
+        ChangePiece(nowY, nowX, '.', '.', '.');
     }
+
+    if ( board[enPassant1[0]][enPassant1[1]] == 'n' ) {
+        ChangePiece(enPassant1[0], enPassant1[1], '.', '.', '.');
+        enPassant1[0] = enPassant1[1] =-1;
+    }
+    if ( board[enPassant1[2]][enPassant1[3]] == 'n' ) {
+        ChangePiece(enPassant1[2], enPassant1[3], '.', '.', '.');
+        enPassant1[2] = enPassant1[3] = -1;
+    }
+
 }
 
 
@@ -716,14 +657,12 @@ void MovePiece1(void)
     함수 이름 : MovePiece2
     함수 설명 : player2 차례에 실행시키며 MovePiece1과 실행방식이 동일하다.
     참조 함수들 : printf(), scanf(), strcmp(), strlen(),
-    @ exception 예외처리
-    //
 **/
 void MovePiece2(void)
 { // player 2 이동함수
     char before[5], after[3];  //이동시킬 말, 위치 입력받을 변수 (save나 exit 입력받아야하는 경우가 있어서 크기: 5)
     int afterY = 0, afterX = 0, nowY = 0, nowX = 0; //이동시킬 말의 행, 열, 이동시킬 위치의 행, 열
-    int didCastling = 0;
+    int didCastling = 0, didEnPassant = 0;
     BackupBoard();
 
     // 이동시킬 말 입력받아 이동할 수 있는 경로 *로 표시하기
@@ -757,6 +696,12 @@ void MovePiece2(void)
             nowY = 2 * (before[1] - 48) + 1; // 입력 받은 숫자(문자열 변수에 저장) 아스키 코드를 이용해서 행 인덱스로 변경
             nowX = 4 * (before[0] - 64) - 2; // 입력 받은 대문자 알파벳 아스키 코드를 이용해서 열 인덱스로 변경
 
+            if ( (nowX < 0 || nowX > 32) || (nowY < 0 || nowY > 16)  )
+            {
+                printf("again!\n");
+                continue;
+            }
+
             if (board[nowY][(nowX - 1)] == '<')
             {
                 printf("It is not yours\n\n");
@@ -774,34 +719,17 @@ void MovePiece2(void)
                 switch (board[nowY][nowX])
                 {
                     case 'P':
-                    {
-                        Pawn(nowY, nowX);
-                        break;
-                    }
+                    { Pawn(nowY, nowX); break; }
                     case 'R':
-                    {
-                        Rook(nowY, nowX);
-                        break;
-                    }
+                    { Rook(nowY, nowX); break; }
                     case 'N':
-                    {
-                        Knight(nowY, nowX);
-                        break;
-                    }
+                    { Knight(nowY, nowX); break; }
                     case 'B':
-                    {
-                        Bishop(nowY, nowX);
-                        break;
-                    }
+                    { Bishop(nowY, nowX); break; }
                     case 'Q':
-                    {
-                        Queen(nowY, nowX);
-                        break;
-                    }
+                    { Queen(nowY, nowX); break; }
                     case 'K':
-                    {
-                        King(nowY, nowX);
-                        Castling(2);
+                    { King(nowY, nowX); Castling(2);
                         shortCastlingCheck[1] = longCastlingCheck[1] = 1;
                         break;
                     }
@@ -817,10 +745,8 @@ void MovePiece2(void)
 
                         if (board[2 * i + 1][4 * j + 2] == '*')
                         { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
-                            board[2 * i + 1][4 * j + 1] = '[';
-                            board[2 * i + 1][4 * j + 2] = board[nowY][nowX];
-                            board[2 * i + 1][4 * j + 3] = ']';
-                            board[nowY][(nowX - 1)] = board[nowY][nowX] = board[nowY][(nowX + 1)] = '.';
+                            ChangePiece( 2*i+1, 4*j+2, '[', board[nowY][nowX], ']');
+                            ChangePiece( nowY, nowX, '.', '.', '.');
                             DeleteStar();
 
                             if (board[2 * i + 1][4 * j + 2] != 'K')
@@ -869,7 +795,6 @@ void MovePiece2(void)
                 else
                 { // 이동 시킬 수 있는 위치가 있는 경우
                     countStar = 0; //다음 이용을 위해 초기화
-                    Clear();
                     PrintBoard(); // 이동 가능 위치 표시된 체스판 출력
                     break;
                 }
@@ -878,7 +803,6 @@ void MovePiece2(void)
         else
         {
             printf("again\n");
-            Clear();
             PrintBoard();
             continue;
         }
@@ -899,6 +823,41 @@ void MovePiece2(void)
 
             Promotion(nowX, nowY, afterY, 2);
 
+            /**캐슬링 할 수 있는데 안하는 경우**/
+            if (board[afterY][afterX] != 'a' ) {
+                if (board[kingY2][kingX2 + 8] == 'a') {
+                    ChangePiece(kingY2, kingX2 + 8, '.', '.', '.');
+                }
+                if (board[kingY2][kingX2 - 8] == 'a') {
+                    ChangePiece(kingY2, kingX2 - 8, '.', '.', '.');
+                }
+            }
+
+            /**앙파상 할 수 있는데 안하는 경우**/
+            if (board[afterY][afterX] != 'n') {
+                if ( board[enPassant2[0]][enPassant2[1]] == 'n') {
+                    ChangePiece(enPassant2[0], enPassant2[1], '.', '.', '.');
+                    enPassant2[0] = enPassant2[1] = -1;
+                }
+                if ( board[enPassant2[2]][enPassant2[3]] == 'n') {
+                    ChangePiece(enPassant2[2], enPassant2[3], '.', '.', '.');
+                    enPassant2[2] = enPassant2[3] = -1;
+                }
+            }
+
+            /**캐슬링 하는 경우**/
+            if (board[afterY][afterX] == 'a') {
+                didCastling = 1;
+                DeleteStar();
+                break;
+            }
+                /**앙파상 하는 경우**/
+            else if (board[afterY][afterX] == 'n') {
+                didEnPassant = 1;
+                DeleteStar();
+                break;
+            }
+
             if (board[afterY][afterX] != '*')
             {
                 printf("again\n");
@@ -912,7 +871,6 @@ void MovePiece2(void)
             } // 본인 말이 있는 위치 선택 시 다시 입력
             else
             {
-                if (board[afterY][afterX - 1] == '*') {didCastling = 1;}
                 DeleteStar();
                 break;
             } // 이동할 위치 정해졌으니 *표시 모두 제거
@@ -920,7 +878,6 @@ void MovePiece2(void)
         else
         {
             printf("again\n");
-            Clear();
             PrintBoard();
             continue;
         }
@@ -929,20 +886,35 @@ void MovePiece2(void)
     if (winner != 1)
     { // 게임이 종료되는 경우가 아니면 실행
 
-        //캐슬링 실행 시
-        if (didCastling == 1) { //longcastling
+        /**캐슬링 실행 시**/
+        if (didCastling == 1) {
 
             if (afterX == 22) {
-                board[15][17] = '[';
-                board[15][18] = 'R';
-                board[15][19] = ']';
-                board[15][29] = board[15][30] = board[15][31] = '.';
+                ChangePiece(15, 18, '[', 'R', ']');
+                ChangePiece( 15, 30, '.', '.', '.');
             }
             else if (afterX == 6) {
-                board[15][9] = '[';
-                board[15][10] = 'R';
-                board[15][11] = ']';
-                board[15][1] = board[15][2] = board[15][3] = '.';
+                ChangePiece(15, 10, '[', 'R', ']');
+                ChangePiece( 15, 2, '.', '.', '.');
+            }
+            DeleteStar();
+        }
+
+        /**앙파상 실행 시**/
+        if (didEnPassant == 1) {
+            strcat(deadPiece1, "<P>");
+            ChangePiece( afterY + 2, afterX, '.', '.', '.');
+        }
+
+        /**앙파상으로 먹을 수 있는 좌표 저장**/
+        if (board[nowY][nowX] == 'P' && afterY == nowY - 4) {
+            if (board[afterY][afterX+3] == '<' && board[afterY][afterX+4] == 'P') {
+                enPassant1[0] = afterY + 2;
+                enPassant1[1] = afterX;
+            }
+            if (board[afterY][afterX-5] == '<' && board[afterY][afterX-4] == 'P') {
+                enPassant1[2] = afterY + 2;
+                enPassant1[3] = afterX;
             }
         }
 
@@ -951,11 +923,11 @@ void MovePiece2(void)
         {
             kingX2 = afterY;
             kingY2 = afterX;
+            longCastlingCheck[1] = shortCastlingCheck[1] = 1;
         }
 
         // 왕 잡으면 end
         if (board[afterY][afterX] == 'K') winner = 2;
-
 
         // 자리 옮기기
         if (board[afterY][(afterX - 1)] == '<')
@@ -964,34 +936,19 @@ void MovePiece2(void)
             switch (backupBoard[afterY][afterX])
             { // "DIE-" 뒤에 이어서 저장 (strcat() 이용)
                 case 'P':
-                {
-                    strcat(deadPiece1, "<P>");
-                    break;
-                }
+                { strcat(deadPiece1, "<P>"); break; }
                 case 'R':
-                {
-                    strcat(deadPiece1, "<R>");
-                    break;
-                }
+                { strcat(deadPiece1, "<R>"); break; }
                 case 'B':
-                {
-                    strcat(deadPiece1, "<B>");
-                    break;
-                }
+                { strcat(deadPiece1, "<B>"); break; }
                 case 'N':
-                {
-                    strcat(deadPiece1, "<N>");
-                    break;
-                }
+                { strcat(deadPiece1, "<N>"); break; }
                 case 'Q':
-                {
-                    strcat(deadPiece1, "<Q>");
-                    break;
-                }
+                { strcat(deadPiece1, "<Q>"); break; }
             }
         }
 
-        // R 움직이면 그 이후 캐슬링 불가
+        /** R 움직이면 그 이후 캐슬링 불가 **/
         if (board[nowY][nowX] == 'R' && nowX == 2) {
             shortCastlingCheck[1] = 1;
         }
@@ -999,16 +956,20 @@ void MovePiece2(void)
             longCastlingCheck[1] = 1;
         }
 
-        // 위치 변경 후 기존 자리는 '...'으로 표시
-        board[afterY][afterX] = board[nowY][nowX];
-        board[afterY][++afterX] = ']';
-        afterX--;
-        board[afterY][--afterX] = '[';
-        board[nowY][nowX] = '.';
-        board[nowY][++nowX] = '.';
-        nowX--;
-        board[nowY][--nowX] = '.';
+        // 위치 변경
+        ChangePiece(afterY, afterX, '[', board[nowY][nowX], ']');
+        ChangePiece(nowY, nowX, '.', '.', '.');
     }
+
+    if ( board[enPassant2[0]][enPassant2[1]] == 'n' ) {
+        ChangePiece(enPassant2[0], enPassant2[1], '.', '.', '.');
+        enPassant2[0] = enPassant2[1] = -1;
+    }
+    if ( board[enPassant2[2]][enPassant2[3]] == 'n' ) {
+        ChangePiece(enPassant2[2], enPassant2[3], '.', '.', '.');
+        enPassant2[2] = enPassant2[3] = -1;
+    }
+
 }
 
 
@@ -1036,22 +997,28 @@ void Pawn(int nowY, int nowX)
             board[nowY + 2][nowX] = '*';
 
             if (nowY == 3)
-            {
+            { // 처음 이동 시키는 경우 두 칸 전진도 가능하다
                 board[nowY + 4][nowX] = '*';
-            } // 처음 이동 시키는 경우 두 칸 전진도 가능하다
+            }
         }
 
         if (board[nowY + 2][nowX - 4] != '.' && board[nowY + 2][nowX - 5] == '[')
-        {
-            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
+        { // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             board[nowY + 2][nowX - 4] = '*';
         }
 
         if (board[nowY + 2][nowX + 4] != '.' && board[nowY + 2][nowX + 5] == ']')
-        {
-            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
-
+        { // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             board[nowY + 2][nowX + 4] = '*';
+        }
+
+        /** 앙파상 **/
+        if (enPassant1[0] >= 0 && nowX == enPassant1[1] + 4 && nowY == enPassant1[0] + 2) {
+            ChangePiece(enPassant1[0], enPassant1[1], 'E', 'n', 'P');
+        }
+
+        if (enPassant1[2] >= 0 && nowX == enPassant1[3] - 4 && nowY == enPassant1[2] + 2)  {
+            ChangePiece(enPassant1[2], enPassant1[3], 'E', 'n', 'P');
         }
     }
 
@@ -1069,15 +1036,22 @@ void Pawn(int nowY, int nowX)
         }
 
         if (board[nowY - 2][nowX - 4] != '.' && board[nowY - 2][nowX - 5] == '<')
-        {
-            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
+        { // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             board[nowY - 2][nowX - 4] = '*';
         }
 
         if (board[nowY - 2][nowX + 4] != '.' && board[nowY - 2][nowX + 3] == '<')
-        {
-            // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
+        { // 한 칸 대각선에 상대말 말이 있는 경우 이동하여 잡는 것이 가능하다
             board[nowY - 2][nowX + 4] = '*';
+        }
+
+        /** 앙파상 **/
+        if (enPassant2[0] >= 0 && nowX == enPassant2[1] + 4 && nowY == enPassant2[0] - 2) {
+            ChangePiece(enPassant2[0], enPassant2[1], 'E', 'n', 'P');
+        }
+
+        if (enPassant2[2] >= 0 && nowX == enPassant2[3] - 4 && nowY == enPassant2[2] - 2) {
+            ChangePiece(enPassant2[2], enPassant2[3], 'E', 'n', 'P');
         }
     }
 }
@@ -2027,8 +2001,6 @@ int Check(int player, int king)
         nowY : 이동시킬 King의 현재 y좌표
         nowX : 이동시킬 King의 현재 x좌표
     참조 함수들 :
-    @ exception 예외처리
-    //
 **/
 int Checkmate(int player)
 {
@@ -2044,30 +2016,12 @@ int Checkmate(int player)
                 { // 판에 있는 모든 player1의 말을 대상으로 확인
                     switch (board[I][J])
                     { // 말의 종류에 따라 이동 가능한 위치 표시
-                        case 'P': {
-                            Pawn(I, J);
-                            break;
-                        }
-                        case 'R': {
-                            Rook(I, J);
-                            break;
-                        }
-                        case 'N': {
-                            Knight(I, J);
-                            break;
-                        }
-                        case 'B': {
-                            Bishop(I, J);
-                            break;
-                        }
-                        case 'Q': {
-                            Queen(I, J);
-                            break;
-                        }
-                        case 'K': {
-                            King(I, J);
-                            break;
-                        }
+                        case 'P': { Pawn(I, J); break; }
+                        case 'R': { Rook(I, J); break; }
+                        case 'N': { Knight(I, J); break; }
+                        case 'B': { Bishop(I, J); break; }
+                        case 'Q': { Queen(I, J); break;}
+                        case 'K': { King(I, J); break; }
                     }
 
                     // 이동 후 check 상태가 되는 곳은 .으로 변경
@@ -2080,10 +2034,8 @@ int Checkmate(int player)
 
                             if (board[2 * i + 1][4 * j + 2] == '*')
                             {  // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
-                                board[2 * i + 1][4 * j + 1] = '<';
-                                board[2 * i + 1][4 * j + 2] = board[I][J];
-                                board[2 * i + 1][4 * j + 3] = '>';
-                                board[I][J - 1] = board[I][J] = board[I][J + 1] = '.';
+                                ChangePiece(2*i+1, 4*j+2, '<', board[I][J], '>');
+                                ChangePiece(I, J, '.', '.', '.');
                                 DeleteStar();
 
                                 if (board[2 * i + 1][4 * j + 2] != 'K')
@@ -2150,30 +2102,12 @@ int Checkmate(int player)
                 { // 판에 있는 모든 player2의 말을 대상으로 확인
                     switch (board[I][J])
                     { // 말의 종류에 따라 이동 가능한 위치 표시
-                        case 'P': {
-                            Pawn(I, J);
-                            break;
-                        }
-                        case 'R': {
-                            Rook(I, J);
-                            break;
-                        }
-                        case 'N': {
-                            Knight(I, J);
-                            break;
-                        }
-                        case 'B': {
-                            Bishop(I, J);
-                            break;
-                        }
-                        case 'Q': {
-                            Queen(I, J);
-                            break;
-                        }
-                        case 'K': {
-                            King(I, J);
-                            break;
-                        }
+                        case 'P': { Pawn(I, J); break; }
+                        case 'R': { Rook(I, J); break; }
+                        case 'N': { Knight(I, J); break; }
+                        case 'B': { Bishop(I, J); break; }
+                        case 'Q': { Queen(I, J); break; }
+                        case 'K': { King(I, J); break; }
                     }
 
                     // 이동 후 check 상태가 되는 곳은 .으로 변경
@@ -2186,10 +2120,8 @@ int Checkmate(int player)
 
                             if (board[2 * i + 1][4 * j + 2] == '*')
                             { // 이동 가능하다고 표시된 곳으로 이동시키기 (임시)
-                                board[2 * i + 1][4 * j + 1] = '[';
-                                board[2 * i + 1][4 * j + 2] = board[I][J];
-                                board[2 * i + 1][4 * j + 3] = ']';
-                                board[I][J - 1] = board[I][J] = board[I][J + 1] = '.';
+                                ChangePiece(2*i+1, 4*j+2, '[', board[I][J], ']');
+                                ChangePiece(I, J, '.', '.', '.');
                                 DeleteStar();
 
                                 if (board[2 * i + 1][4 * j + 2] != 'K')
@@ -2269,7 +2201,8 @@ void Promotion(int beforex, int beforey, int aftery, int player) {
 
             if (Change[0] == 'Q' || Change[0] == 'B' || Change[0] == 'N' || Change[0] == 'R') {
                 board[beforey][beforex] = Change[0]; // 입력받은 문자열로 변경
-            } else { // 다른 문자 입력하면 PASS!
+            }
+            else { // 다른 문자 입력하면 PASS!
                 printf("You can not change P to %c\n", Change[0]);
             }
         }
@@ -2319,7 +2252,7 @@ void Castling(int player) {
             }
 
             if (piece == 0) {
-                board[kingY1][kingX1 + 7] = board[kingY1][kingX1 + 8] = board[kingY1][kingX1 + 9] = '*';
+                ChangePiece( kingY1, kingX1 + 8, 'C', 'a', 's');
             }
         }
         piece = 0;
@@ -2328,14 +2261,11 @@ void Castling(int player) {
             for (int i = (kingX1 - 4) ; i > 2 ; i -= 4)
             {
                 if (board[kingY1][i] != '.' && board[kingY1][i] != '*')
-                {
-                    piece += 1;
-                    break;
-                }
+                { piece += 1; break; }
             }
 
             if (piece == 0) {
-                board[kingY1][kingX1 - 7] = board[kingY1][kingX1 - 8] = board[kingY1][kingX1 - 9] = '*';
+                ChangePiece(kingY1, kingX1 - 8, 'C', 'a', 's');
             }
         }
     }
@@ -2351,9 +2281,8 @@ void Castling(int player) {
                 }
             }
 
-            if (piece == 0) {
-                board[kingY2][kingX2 + 7] = board[kingY2][kingX2 + 8] = board[kingY2][kingX2 + 9] = '*';
-            }
+            if (piece == 0)
+            { ChangePiece(kingY2, kingX2 + 8, 'C', 'a', 's'); }
         }
         piece = 0;
         /**shortcasting**/
@@ -2361,14 +2290,11 @@ void Castling(int player) {
             for (int i = (kingX2 - 4) ; i > 2 ; i -= 4)
             {
                 if (board[kingY2][i] != '.' && board[kingY2][i] != '*')
-                {
-                    piece += 1;
-                    break;
-                }
+                { piece += 1; break; }
             }
 
             if (piece == 0) {
-                board[kingY2][kingX2 - 7] = board[kingY2][kingX2 - 8] = board[kingY2][kingX2 - 9] = '*';
+                { ChangePiece(kingY2, kingX2 - 8, 'C', 'a', 's'); }
             }
         }
     }
