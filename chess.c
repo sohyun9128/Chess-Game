@@ -106,6 +106,7 @@ int main() {
             printf("게임을 종료합니다. 감사합니다.");
             break; // while문 종료
         }
+        else continue;
     }
     return 0;
 }
