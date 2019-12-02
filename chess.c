@@ -115,7 +115,6 @@ int main() {
 /**
     함수 이름 : Clear
     함수 설명 : 화면을 깨끗하게 정리해준다.
-    참조 함수들 : system("clear")
 **/
 void Clear()
 { system("clear"); }
@@ -124,10 +123,6 @@ void Clear()
 /**
     함수 이름 : getch
     함수 설명 : 도움말 출력 시 사용자가 페이지를 넘기기 위해 누르는 엔터를 입력받기 위함 (getch 구현)
-    파라미터 이름 :
-    파라미터 설명
-        파라미터 이름 :
-    참조 함수들 :
 **/
 int getch()
 {
@@ -152,7 +147,6 @@ int getch()
     파라미터 이름 : mode
     파라미터 설명
         mode : 1이면 새 게임, 2면 저장된 게임
-    참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
 **/
 void LoadChessGame(int  mode )
 {
@@ -205,7 +199,7 @@ void LoadChessGame(int  mode )
 /**
     함수 이름 : PrintRule
     함수 설명 : 게임진행 방법과 규칙을 출력한다.
-    참조 함수들 : getch(), printf(), Clear();
+    참조 함수들 : getch() - 출력 후 메뉴로 돌아가기 위해 엔터 입력, Clear() - 출력 전 화면 정리
 **/
 void PrintRule()
 {
@@ -223,8 +217,7 @@ void PrintRule()
 
 /**
     함수 이름 : PrintBoard
-    함수 설명 : 배열에 저장된
-    참조 함수들 : printf()
+    함수 설명 : 배열에 저장된 체스판 출력
 **/
 void PrintBoard(void)
 { // 체스판 출력
@@ -252,7 +245,6 @@ void PrintBoard(void)
 /**
     함수 이름 : BackupBoard
     함수 설명 : 현재 플레이 중인 게임판을 백업용 게임판에 저장한다.
-    참조 함수들 : strcpy()
 **/
 void BackupBoard(void)
 { // 백그라운드 체스판에 현재 판 복사
@@ -264,7 +256,6 @@ void BackupBoard(void)
 /**
     함수 이름 : BackupCheckBoard
     함수 설명 : 체크여부 확인시 임의로 이동시킨 말을 원래 위치로 되돌려놓기 위해 게임판을 백업한다.
-    참조 함수들 : strcpy()
 **/
 void BackupCheckBoard(void)
 { // 체크여부확인 체스판에 현재 판 복사
@@ -276,7 +267,6 @@ void BackupCheckBoard(void)
 /**
     함수 이름 : ReturnCheckBoard
     함수 설명 : 체크여부 확인 후 게임판을 원상복귀 시킨다.
-    참조 함수들 : strcpy()
 **/
 void ReturnCheckBoard(void)
 { // 현재 판에 체크여부확인 체스판 복사
@@ -288,8 +278,6 @@ void ReturnCheckBoard(void)
 /**
     함수 이름 : DeleteStar
     함수 설명 : 이동 가능 위치를 표시를 위해 사용한 '*'을 말 이동 이후 원상복귀 시킨다.
-    @ exception 예외처리
-    //
 **/
 void DeleteStar(void)
 { // 이동 후 이동 가능 여부 체크했던 *표시 원래대로 돌려놓음
@@ -333,7 +321,9 @@ void ChangePiece(int y, int x, char one, char two, char three) {
                F - 이동 가능한 위치가 없다면 이동시킬 말의 좌표를 다시 입력받는다.
                G - 이동 시킬 위치의 좌표를 입력받아 이동가능 여부를 확인한 후 이동시키거나 좌표를 다시 입력받는다.
                   (상대방의 말을 잡은 경우 해당 배열에 정보를 저장하여 이후 출력시킬 수 있도록 한다.)
-    참조 함수들 : printf(), scanf(), strcmp(), strlen(),
+    참조 함수들 : Pawn, Rook, King, Knight, Bishop, Queen - 각 말을 선택했을 때 이동 가능한 위치 *표시
+                 Castling, Check - 캐슬링 가능여부나 체크여부 확인
+                 ChangePiece - 말 이동시키기
 **/
 void MovePiece1(void)
 { // player 1 이동함수
@@ -657,7 +647,9 @@ void MovePiece1(void)
 /**
     함수 이름 : MovePiece2
     함수 설명 : player2 차례에 실행시키며 MovePiece1과 실행방식이 동일하다.
-    참조 함수들 : printf(), scanf(), strcmp(), strlen(),
+    참조 함수들 : Pawn, Rook, King, Knight, Bishop, Queen - 각 말을 선택했을 때 이동 가능한 위치 *표시
+                 Castling, Check - 캐슬링 가능여부나 체크여부 확인
+                 ChangePiece - 말 이동시키기
 **/
 void MovePiece2(void)
 { // player 2 이동함수
@@ -983,9 +975,6 @@ void MovePiece2(void)
     파라미터 설명
         nowY : 이동시킬 pawn의 현재 y좌표
         nowX : 이동시킬 pawn의 현재 x좌표
-    참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
-    @ exception 예외처리
-    //
 **/
 void Pawn(int nowY, int nowX)
 { // Pawn 선택 시 이동 가능 위치 *로 표시
@@ -1066,9 +1055,6 @@ void Pawn(int nowY, int nowX)
     파라미터 설명
         nowY : 이동시킬 Rook의 현재 y좌표
         nowX : 이동시킬 Rook의 현재 x좌표
-    참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
-    @ exception 예외처리
-    //
 **/
 void Rook(int nowY, int nowX)
 { // Rook 선택 시 이동 가능 위치 *로 표시
@@ -1225,9 +1211,6 @@ void Rook(int nowY, int nowX)
     파라미터 설명
         nowY : 이동시킬 Bishop의 현재 y좌표
         nowX : 이동시킬 Bishop의 현재 x좌표
-    참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
-    @ exception 예외처리
-    //
 **/
 void Bishop(int nowY, int nowX)
 { // Bishop 선택 시 이동 가능 위치 *로 표시
@@ -1416,9 +1399,6 @@ void Bishop(int nowY, int nowX)
     파라미터 설명
         nowY : 이동시킬 Knight의 현재 y좌표
         nowX : 이동시킬 Knight의 현재 x좌표
-    참조 함수들 : fopen(), fscanf(), strcpy(), fclose()
-    @ exception 예외처리
-    //
 **/
 void Knight(int nowY, int nowX)
 { // Knight 선택 시 이동 가능 위치 *로 표시
@@ -1491,8 +1471,6 @@ void Knight(int nowY, int nowX)
         nowY : 이동시킬 Queen의 현재 y좌표
         nowX : 이동시킬 Queen의 현재 x좌표
     참조 함수들 : Rook(), Bishop()
-    @ exception 예외처리
-    //
 **/
 void Queen(int nowY, int nowX)
 { // Queen 선택 시 이동 가능 위치 *로 표시
@@ -1509,9 +1487,6 @@ void Queen(int nowY, int nowX)
     파라미터 설명
         nowY : 이동시킬 King의 현재 y좌표
         nowX : 이동시킬 King의 현재 x좌표
-    참조 함수들 :
-    @ exception 예외처리
-    //
 **/
 void King(int nowY, int nowX)
 { // King 선택 시 이동 가능 위치 *로 표시
@@ -1559,9 +1534,6 @@ void King(int nowY, int nowX)
 /**
     함수 이름 : SaveGame
     함수 설명 : 현재 게임 상황(게임보드, 순서, 죽은 말)을 지정한 파일에 저장한다. (파일이 존재하지 않는 경우 생성하여 저장한다.)
-    참조 함수들 : fopen(), fprintf(), fclose()
-    @ exception 예외처리
-    //
 **/
 void SaveGame(void)
 { // 현재 실행중인 체스판 저장
@@ -1600,9 +1572,6 @@ void SaveGame(void)
     파라미터 설명
         player : 체크 여부를 확인하는 player ( player는 1 또는 2)
         king : 이동 시킬 말이 King인 경우 이동 후 좌표를 이용하여 체크 여부를 확인하기 위해 이동 여부를 알린다. (king 이동 시 1)
-    참조 함수들 :
-    @ exception 예외처리
-    //
 **/
 int Check(int player, int king)
 { // 모든 말이 움직일 수 있는 경우의 수를 계산하고 그 중 check상태가 될 수 있는 경우가 있는지 확인하기
@@ -2001,7 +1970,7 @@ int Check(int player, int king)
     파라미터 설명
         nowY : 이동시킬 King의 현재 y좌표
         nowX : 이동시킬 King의 현재 x좌표
-    참조 함수들 :
+    참조 함수들 : Check - 이동 가는 한 곳으로 임시 이동 시킨 후 체크여부를 확인
 **/
 int Checkmate(int player)
 {
@@ -2188,8 +2157,6 @@ int Checkmate(int player)
         beforey : player가 이동시킬 말의 y좌표
         aftery : 말을 이동시킬 위치의 y좌표
         player : 실행시킬 player (1 or 2)
-    @ exception 예외처리
-    //
 **/
 void Promotion(int beforex, int beforey, int aftery, int player) {
 
@@ -2234,8 +2201,6 @@ void Promotion(int beforex, int beforey, int aftery, int player) {
     파라미터 이름 : player
     파라미터 설명
         player : 실행시키는 player 번호 (1 or 2)
-    @ exception 예외처리
-    //
 **/
 void Castling(int player) {
     int piece = 0;
